@@ -14,7 +14,6 @@ from PIL import Image, ImageTk
 pygame.init()
 original_dir = os.getcwd()
 
-
 def disable_event():
    pass
 
@@ -64,17 +63,17 @@ def fly_to(x, y, turtle_):
 
 
 def get_rows():
-    conn = sqlite3.connect('Rayyan_Blood_Donation/Database.db')
+    conn = sqlite3.connect('User Profiles/Database.db')
     cur = conn.cursor()
 
-    if transaction_type == "Donation":
-        os.chdir('Rayyan_Blood_Donation/Donator')
+    if transaction_type == "Donors":
+        os.chdir('User Profiles/Donors')
     else:
-        os.chdir('Rayyan_Blood_Donation/Recieve')
+        os.chdir('User Profiles/Receivers')
 
     cur.execute("SELECT * FROM {}".format(transaction_type))
 
-    cv2.imwrite('ID_[{}].png'.format(current_id), frame)
+    cv2.imwrite(f'ID_[{current_id}].png', frame)
     os.chdir(original_dir)
 
 
@@ -388,12 +387,10 @@ def change_sc(prev_sc, next_sc, current_sc, mode):
     if mode=="P":
         prev_sc.deiconify()
         if prev_sc==process:
-            os.chdir('Rayyan_Blood_Donation')
-            mixer.music.load('Peaceful_Music.wav')
+            mixer.music.load('Assets/Peaceful_Music.wav')
             mixer.music.play(-1)
         elif img_capt==prev_sc:
-            os.chdir('Rayyan_Blood_Donation')
-            mixer.music.load('Peaceful_Music.wav')
+            mixer.music.load('Assets/Peaceful_Music.wav')
             mixer.music.stop()
             Start_capture.flash()
     elif mode=="N":
@@ -403,10 +400,10 @@ def change_sc(prev_sc, next_sc, current_sc, mode):
         if next_sc!=img_capt:
             next_sc.deiconify()
         if next_sc==process:
-            mixer.music.load('Peaceful_Music.wav')
+            mixer.music.load('Assets/Peaceful_Music.wav')
             mixer.music.play(-1)
         elif next_sc==confirm:
-            mixer.music.load('Peaceful_Music.wav')
+            mixer.music.load('Assets/Peaceful_Music.wav')
             mixer.music.stop()
             show_data()
         elif next_sc==the_end:
@@ -424,8 +421,7 @@ def change_sc(prev_sc, next_sc, current_sc, mode):
             Graphic_Design()
             sc.deiconify()
             if current_sc==process:
-                os.chdir('Rayyan_Blood_Donation')
-                mixer.music.load('Peaceful_Music.wav')
+                mixer.music.load('Assets/Peaceful_Music.wav')
                 mixer.music.stop()
         else:
             current_sc.deiconify()
@@ -442,7 +438,7 @@ def convertToBinaryData(filename):
     return blobData
 
 def insertBLOB(photo):
-    os.chdir('Rayyan_Blood_Donation')
+    os.chdir('User Profiles')
     conn = sqlite3.connect('Database.db')
     cursor = conn.cursor()
     empPhoto = convertToBinaryData(photo)
@@ -450,13 +446,14 @@ def insertBLOB(photo):
      Contact_Number_c.get(), Email_id_c.get(), Pulse_rate_c,
      Height_c, Weight_c, Restrictions_c, Consumptions_c, empPhoto]
 
-    conn.execute('''INSERT INTO Donation(UNIQUE_ID, NAME, AGE, GENDER, FEMALE_CONDITIONS, LAST, BLOOD_GROUP, CONTACT_NUMBER, EMAIL_ID, PULSE_RATE, 
+    conn.execute('''INSERT INTO Donors(UNIQUE_ID, NAME, AGE, GENDER, FEMALE_CONDITIONS, LAST, BLOOD_GROUP, CONTACT_NUMBER, EMAIL_ID, PULSE_RATE, 
             HEIGHT_(IN_CM), WEIGHT_(IN_KG), RESTRICTION(S), CONSUMPTION(S), PHOTOGRAPH)\
             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (current_id, Name_c.get(), Age_c.get(), Gender_c.get(), Female_c.get(), Frequency_c.get(), Blood_group_c.get(),
      Contact_Number_c.get(), Email_id_c.get(), Pulse_rate_c,
      Height_c, Weight_c, Restrictions_c, Consumptions_c, empPhoto))
     conn.commit()
     print("Image and file inserted successfully as a BLOB into a table")
+    os.chdir(original_dir)
 
 def progressbar():
     p.config(mode='determinate')
@@ -472,21 +469,22 @@ def progressbar():
     the_end.withdraw()
     saved.forget()
 
-    os.chdir(original_dir)
-    if transaction_type == "Donation":
-        os.chdir('Rayyan_Blood_Donation/Donator')
+    if transaction_type == "Donors":
+        os.chdir('User Profiles/Donors')
     else:
-        os.chdir('Rayyan_Blood_Donation/Recieve')
+        os.chdir('User Profiles/Receivers')
 
-    insertBLOB('Rayyan_Blood_Donation/{}\ID_[{}].png'.format(transaction_type, current_id), transaction_type)
+    insertBLOB(f'ID_[{current_id}].png', transaction_type)
     one_time_only(1)
+
+    os.chdir(original_dir)
 
 def common(type):
     global transaction_type, current_id, img_capt, video_label, detection_error, save_img
 
     transaction_type = type
 
-    os.chdir('Rayyan_Blood_Donation')
+    os.chdir('User Profiles')
     conn = sqlite3.connect('Database.db')
     cur = conn.cursor()
     cur.execute("SELECT * FROM {}".format(transaction_type))
@@ -714,14 +712,14 @@ turtle_sc = Toplevel(root)
 turtle_sc.protocol("WM_DELETE_WINDOW", disable_event)
 turtle_sc.geometry('800x500+150+50')
 turtle_sc.resizable(False, False)
-turtle_sc.title('Rayyan Blood Donations')
+turtle_sc.title('Rayyan Blood Bank')
 canvas=Canvas(master = turtle_sc, width = 800, height = 500)
 canvas.grid(padx=2, pady=2, row=0, column=0, rowspan=10, columnspan=10)
 screen = TurtleScreen(canvas)
-screen.register_shape('giphy.gif')
+screen.register_shape('Assets/giphy.gif')
 t = RawTurtle(screen)
 b = RawTurtle(screen)
-b.shape('giphy.gif')
+b.shape('Assets/giphy.gif')
 turtle_sc.withdraw()
 
 sc = Toplevel(root)
@@ -735,10 +733,10 @@ selection=Label(sc, text="What would you like to do?", fg="black", font=('Courie
 selection.place(anchor=CENTER, relx=.5, rely=.1)
 sc_fr = Frame(sc)
 sc_fr.place(anchor=CENTER, relx=.5, rely=.5)
-donate = Button(sc_fr, text="DONATE", fg="lime", bg='dark blue', width=30, height= 6, font=("bold", 20), command=lambda:common('Donations'))
+donate = Button(sc_fr, text="DONATE", fg="lime", bg='dark blue', width=30, height= 6, font=("bold", 20), command=lambda:common('Donors'))
 donate.grid(row=0, column=0, padx=(20, 10))
-recieve = Button(sc_fr, text="RECIEVE", fg="yellow", bg='red', width=30, height= 6, font=("bold", 20), command=lambda:common('Recieve'))
-recieve.grid(row=0, column=2, padx=(10, 20))
+receive = Button(sc_fr, text="RECEIVE", fg="yellow", bg='red', width=30, height= 6, font=("bold", 20), command=lambda:common('Receivers'))
+receive.grid(row=0, column=2, padx=(10, 20))
 Exit = Button(sc_fr, text="EXIT", fg="white", bg='black', width=25, height= 6, font=("bold", 20), command=lambda:one_time_only(0))
 Exit.grid(row=0, column=1, padx=10)
 
