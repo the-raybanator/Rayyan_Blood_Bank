@@ -10,6 +10,7 @@ import pygame
 from pygame import mixer
 import sqlite3
 pygame.init()
+original_dir = os.getcwd()
 
 def disable_event():
    pass
@@ -69,18 +70,20 @@ def fly_to(x, y, turtle_):
         b.pendown()
 
 def get_rows(title):
-    os.chdir('D:\Rayyan_Blood_Donation')
-    conn = sqlite3.connect('Database.db')
+    conn = sqlite3.connect('Rayyan_Blood_Donation/Database.db')
     cur = conn.cursor()
 
     if title == "Donation":
-        os.chdir('D:\Rayyan_Blood_Donation\Donator')
+        os.chdir('Rayyan_Blood_Donation/Donator')
     else:
-        os.chdir('D:\Rayyan_Blood_Donation\Recieve')
+        os.chdir('Rayyan_Blood_Donation/Recieve')
 
+    print(table_name)
     cur.execute("SELECT * FROM {}".format(table_name))
 
     cv2.imwrite('ID_[{}].png'.format(current_id), frame)
+    os.chdir(original_dir)
+
 
 def capt_img(title):
     for i in range(5):
@@ -171,7 +174,7 @@ def verify_details():
     try:
         if int(Age_input.get())>65:
             sc_donate_collect.withdraw()
-            messagebox.showinfo("Information", "Sorry... You cannot donate blood asyou are above 65 years of age. ")
+            tk_messagebox.showinfo("Information", "Sorry... You cannot donate blood asyou are above 65 years of age. ")
             error = 1
             return()
         elif int(Age_input.get()) < 18:
@@ -363,11 +366,11 @@ def change_sc(prev_sc, next_sc, current_sc, mode):
     if mode=="P":
         prev_sc.deiconify()
         if prev_sc==process:
-            os.chdir('D:\Rayyan_Blood_Donation')
+            os.chdir('Rayyan_Blood_Donation')
             mixer.music.load('Peaceful_Music.wav')
             mixer.music.play(-1)
         elif img_capt==prev_sc:
-            os.chdir('D:\Rayyan_Blood_Donation')
+            os.chdir('Rayyan_Blood_Donation')
             mixer.music.load('Peaceful_Music.wav')
             mixer.music.stop()
             Start_capture.flash()
@@ -378,11 +381,11 @@ def change_sc(prev_sc, next_sc, current_sc, mode):
         if next_sc!=img_capt:
             next_sc.deiconify()
         if next_sc==process:
-            os.chdir('D:\Rayyan_Blood_Donation')
+            os.chdir('Rayyan_Blood_Donation')
             mixer.music.load('Peaceful_Music.wav')
             mixer.music.play(-1)
         elif next_sc==confirm:
-            os.chdir('D:\Rayyan_Blood_Donation')
+            os.chdir('Rayyan_Blood_Donation')
             mixer.music.load('Peaceful_Music.wav')
             mixer.music.stop()
             show_data()
@@ -401,7 +404,7 @@ def change_sc(prev_sc, next_sc, current_sc, mode):
             Graphic_Design()
             sc.deiconify()
             if current_sc==process:
-                os.chdir('D:\Rayyan_Blood_Donation')
+                os.chdir('Rayyan_Blood_Donation')
                 mixer.music.load('Peaceful_Music.wav')
                 mixer.music.stop()
         else:
@@ -421,7 +424,7 @@ def convertToBinaryData(filename):
     return blobData
 
 def insertBLOB(photo, table_name):
-    os.chdir('D:\Rayyan_Blood_Donation')
+    os.chdir('Rayyan_Blood_Donation')
     conn = sqlite3.connect('Database.db')
     cursor = conn.cursor()
     empPhoto = convertToBinaryData(photo)
@@ -451,20 +454,20 @@ def progressbar(title):
     the_end.withdraw()
     saved.forget()
     if title == "Donation":
-        os.chdir('D:\Rayyan_Blood_Donation\Donator')
+        os.chdir('Rayyan_Blood_Donation/Donator')
     else:
-        os.chdir('D:\Rayyan_Blood_Donation\Recieve')
+        os.chdir('Rayyan_Blood_Donation/Recieve')
 
-    insertBLOB('D:\Rayyan_Blood_Donation\{}\ID_[{}].png'.format(table_name, current_id), table_name)
+    insertBLOB('Rayyan_Blood_Donation/{}\ID_[{}].png'.format(table_name, current_id), table_name)
     one_time_only(1)
 
 def common(title):
-    global table_name, current_id
+    global table_name, current_id, img_capt
     if title == "Donation":
         table_name = 'Donation'
     else:
         table_name = 'Recieve'
-    os.chdir('D:\Rayyan_Blood_Donation')
+    os.chdir('Rayyan_Blood_Donation')
     conn = sqlite3.connect('Database.db')
     cur = conn.cursor()
     cur.execute("SELECT * FROM {}".format(table_name))
@@ -483,6 +486,7 @@ def common(title):
     notification.resizable(False, False)
     notification.title('Notification')
 
+    os.chdir(original_dir)
     pic1=Canvas(master=notification, width = 200, height = 200, bg='white')
     pic1.pack(side=LEFT)
     pic_screen1 = TurtleScreen(pic1)
@@ -594,11 +598,12 @@ def common(title):
     Step2_1 = Label(Step2_Frame, text="Step 2:", font=('Courier', 30), borderwidth=2, relief="solid").grid(row=0, column=0)
     Step2_2=Label(Step2_Frame, text='Capture Your Image', font=('Courier', 30)).grid(row=0, column=1)
 
-    Description = Label(img_capt, font=25, text='''Your webcam wil be on and you are requested to take a clear picture of yourself.
+    Description = Label(img_capt, font=25, text='''Your webcam will be on and you are requested to take a clear picture of yourself.
                 Your whole face should show fully. Try not to cover your face with sunglasses, cap, earmuffs, helmet etc.
                 Once the webcam switches on, click 'c' on your keyboard to capture the image...''')
     Description.pack(pady=20)
-    Start_capture = Button(img_capt, text='Click me to open webcam', command=lambda: capt_img(title=title), width=70,
+    
+    Start_capture = Button(img_capt, text='Click me to open webcam', command=lambda: capt_img(title), width=70,
                            font=('bold', 25), activebackground='blue',activeforeground='white', fg='black', bg='lime')
     Start_capture.pack()
 
