@@ -9,26 +9,18 @@ import datetime
 import pygame
 from pygame import mixer
 import sqlite3
+from PIL import Image, ImageTk
+
 pygame.init()
 original_dir = os.getcwd()
+
 
 def disable_event():
    pass
 
-turtle_sc=Tk()
-turtle_sc.protocol("WM_DELETE_WINDOW", disable_event)
-turtle_sc.geometry('800x500+150+50')
-turtle_sc.resizable(False, False)
-turtle_sc.title('Rayyan Blood Donations')
-canvas=Canvas(master = turtle_sc, width = 800, height = 500)
-canvas.grid(padx=2, pady=2, row=0, column=0, rowspan=10, columnspan=10)
-screen = TurtleScreen(canvas)
-screen.register_shape('giphy.gif')
-t = RawTurtle(screen)
-b = RawTurtle(screen)
-b.shape('giphy.gif')
 
 def Graphic_Design():
+    global turtle_sc
     turtle_sc.deiconify()
     t.hideturtle()
     b.hideturtle()
@@ -59,6 +51,7 @@ def Graphic_Design():
     b.reset()
     turtle_sc.withdraw()
 
+
 def fly_to(x, y, turtle_):
     if turtle_ == t:
         t.penup()
@@ -69,64 +62,93 @@ def fly_to(x, y, turtle_):
         b.goto(x, y)
         b.pendown()
 
-def get_rows(title):
+
+def get_rows():
     conn = sqlite3.connect('Rayyan_Blood_Donation/Database.db')
     cur = conn.cursor()
 
-    if title == "Donation":
+    if transaction_type == "Donation":
         os.chdir('Rayyan_Blood_Donation/Donator')
     else:
         os.chdir('Rayyan_Blood_Donation/Recieve')
 
-    print(table_name)
-    cur.execute("SELECT * FROM {}".format(table_name))
+    cur.execute("SELECT * FROM {}".format(transaction_type))
 
     cv2.imwrite('ID_[{}].png'.format(current_id), frame)
     os.chdir(original_dir)
 
 
-def capt_img(title):
-    for i in range(5):
+def capt_img():
+    global frame, capturing, webcam, face_detect_sample, coordinates
+    for i in range(3):
         Start_capture.flash()
-    global frame
-    face_detect_sample = cv2.CascadeClassifier('haarcascade_frontalface_alt.xml')
-    wcam, hcam = 1920, 1080
-    webcam = cv2.VideoCapture(0)
-    webcam.set(3, wcam)
-    webcam.set(4, hcam)
 
-    while (webcam.isOpened()):
-        ret, frame = webcam.read()
+    capturing = True
+    webcam = cv2.VideoCapture(0)
+    Start_capture.configure(text="Click to capture", command=stop_camera)
+
+    detection_error.configure(text="")
+    save_img.pack_forget()
+    coordinates = None
+
+    face_detect_sample = cv2.CascadeClassifier("haarcascade_frontalface_alt.xml")
+
+    update_frame()
+
+
+def update_frame():
+    global coordinates, frame
+
+    if not capturing:
+        crop_preview()
+        return
+
+    ret, frame = webcam.read()
+    if ret:
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         detect_face = face_detect_sample.detectMultiScale(gray_frame, 1.05, 3)
         for (x, y, w, h) in detect_face:
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 3)
-            cv2.putText(frame, "Patient", (x, y), cv2.FONT_HERSHEY_TRIPLEX, 2, (0, 255, 0), 5, cv2.LINE_AA)
-            cv2.imshow("{} - Face Capture".format(title), frame)
-        if cv2.waitKey(1) & 0xFF == ord('c'):
-            break
+            coordinates = ((x-10, y-40), (x + w + 10, y + h + 10))      # top left corner and bottom right corner of a rectangle
+            cv2.rectangle(frame, coordinates[0], coordinates[1], (255, 255, 255), 1)
+            
 
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        img = Image.fromarray(rgb_frame)
+        imgtk = ImageTk.PhotoImage(image=img, master=video_label)
+
+        video_label.imgtk = imgtk
+        video_label.configure(image=imgtk)
+
+    video_label.after(15, update_frame)  # ~66 fps cap; schedules the next call
+
+
+def crop_preview():
+    try:
+        (x1, y1), (x2, y2) = coordinates
+        cropped = frame[y1:y2, x1:x2]
+
+        rgb_cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
+        img = Image.fromarray(rgb_cropped)
+        imgtk = ImageTk.PhotoImage(image=img, master=video_label)
+        video_label.imgtk = imgtk  # keep a reference so it isn't garbage collected
+        video_label.configure(image=imgtk)
+    except:
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        img = Image.fromarray(rgb_frame)
+        imgtk = ImageTk.PhotoImage(image=img, master=video_label)
+        
+        video_label.imgtk = imgtk
+        video_label.configure(image=imgtk)
+        detection_error.configure(text="Unable to detect face, you can either proceed or retake")
+        
+    save_img.pack()
+
+def stop_camera():
+    global capturing
+    capturing = False
     webcam.release()
-    cv2.destroyAllWindows()
 
-    result = tk_messagebox.askquestion("Submit Picture", "Are you sure you want to submit this picture?",
-                                           icon='question')
-    if result == 'yes':
-        cv2.imshow("Check (You Can't Change Later!)", frame)
-        result2 = tk_messagebox.askquestion("Submit Picture", "Are you okay with the preview (we will save this)?",
-                                           icon='question')
-        if result2=='yes':
-            cv2.destroyAllWindows()
-            fr = Frame(exit_prior_step_fr)
-            fr.grid_forget()
-            time.sleep(0.5)
-            next_step_recurring.grid(row=0, column=0)
-            fr.grid(padx=5, row=0, column=1, pady=5)
-            img_capt.update()
-            get_rows(title)
-            hide_img=False
-    else:
-        capt_img(title)
+    Start_capture.configure(text="Click to Start Camera", command=capt_img)
 
 def add_exit_prior_step_btn(prev_sc, next_sc, current_sc):
     global next_step_recurring, exit_prior_step_fr
@@ -381,11 +403,9 @@ def change_sc(prev_sc, next_sc, current_sc, mode):
         if next_sc!=img_capt:
             next_sc.deiconify()
         if next_sc==process:
-            os.chdir('Rayyan_Blood_Donation')
             mixer.music.load('Peaceful_Music.wav')
             mixer.music.play(-1)
         elif next_sc==confirm:
-            os.chdir('Rayyan_Blood_Donation')
             mixer.music.load('Peaceful_Music.wav')
             mixer.music.stop()
             show_data()
@@ -415,15 +435,13 @@ def sc_show():
     sc_donate_collect.deiconify()
 
 
-import sqlite3
-
 def convertToBinaryData(filename):
     # Convert digital data to binary format
     with open(filename, 'rb') as file:
         blobData = file.read()
     return blobData
 
-def insertBLOB(photo, table_name):
+def insertBLOB(photo):
     os.chdir('Rayyan_Blood_Donation')
     conn = sqlite3.connect('Database.db')
     cursor = conn.cursor()
@@ -440,7 +458,7 @@ def insertBLOB(photo, table_name):
     conn.commit()
     print("Image and file inserted successfully as a BLOB into a table")
 
-def progressbar(title):
+def progressbar():
     p.config(mode='determinate')
     p['value'] = 0
     for i in range(5):
@@ -453,24 +471,25 @@ def progressbar(title):
     time.sleep(1)
     the_end.withdraw()
     saved.forget()
-    if title == "Donation":
+
+    os.chdir(original_dir)
+    if transaction_type == "Donation":
         os.chdir('Rayyan_Blood_Donation/Donator')
     else:
         os.chdir('Rayyan_Blood_Donation/Recieve')
 
-    insertBLOB('Rayyan_Blood_Donation/{}\ID_[{}].png'.format(table_name, current_id), table_name)
+    insertBLOB('Rayyan_Blood_Donation/{}\ID_[{}].png'.format(transaction_type, current_id), transaction_type)
     one_time_only(1)
 
-def common(title):
-    global table_name, current_id, img_capt
-    if title == "Donation":
-        table_name = 'Donation'
-    else:
-        table_name = 'Recieve'
+def common(type):
+    global transaction_type, current_id, img_capt, video_label, detection_error, save_img
+
+    transaction_type = type
+
     os.chdir('Rayyan_Blood_Donation')
     conn = sqlite3.connect('Database.db')
     cur = conn.cursor()
-    cur.execute("SELECT * FROM {}".format(table_name))
+    cur.execute("SELECT * FROM {}".format(transaction_type))
     current_id = len(cur.fetchall()) + 1
 
 
@@ -480,7 +499,7 @@ def common(title):
         Female_o, Consumptions_o, Frequency_o, Address_input, Pulse_rate_input, Blood_group_o, Height_input,\
         Weight_input, Restrictions_o, Female_l, notification, Start_capture, p, the_end
 
-    notification = Tk()
+    notification = Toplevel(root)
     notification.geometry('1200x200+50+20')
     notification.protocol("WM_DELETE_WINDOW", disable_event)
     notification.resizable(False, False)
@@ -500,13 +519,13 @@ def common(title):
     to input more than one item, after each name (except the last) put a comma and space then type.''', font=20).pack()
     Button(notification, text='Okay', command=sc_show, font=25, width=20).pack(pady=10)
 
-    sc_donate_collect = Tk()
+    sc_donate_collect = Toplevel(root)
     sc_donate_collect.withdraw()
     sc_donate_collect.geometry('1450x790+50+0')
     confirm.geometry('1450x800+50+0')
     sc_donate_collect.resizable(False, False)
     sc_donate_collect.protocol("WM_DELETE_WINDOW", disable_event)
-    sc_donate_collect.title("{} - Let's Start".format(title))
+    sc_donate_collect.title("{} - Let's Start".format(transaction_type))
     Step1_Frame=Frame(sc_donate_collect)
     Step1_Frame.pack()
     Label(Step1_Frame, text="Step 1:", font=('Courier', 30), borderwidth=2, relief="solid").grid(row=0, column=0)
@@ -591,7 +610,7 @@ def common(title):
     Frequency_o['state'] = 'readonly'
     Female_o.current()
 
-    img_capt.title('{} - Note for Capturing Face'.format(title))
+    img_capt.title('{} - Note for Capturing Face'.format(transaction_type))
 
     Step2_Frame=Frame(img_capt)
     Step2_Frame.pack(pady=10)
@@ -603,11 +622,19 @@ def common(title):
                 Once the webcam switches on, click 'c' on your keyboard to capture the image...''')
     Description.pack(pady=20)
     
-    Start_capture = Button(img_capt, text='Click me to open webcam', command=lambda: capt_img(title), width=70,
+    Start_capture = Button(img_capt, text='Click me to open webcam', command=capt_img, width=70,
                            font=('bold', 25), activebackground='blue',activeforeground='white', fg='black', bg='lime')
     Start_capture.pack()
 
-    process.title("{} - All the Best!!!".format(title))
+    video_label = Label(img_capt)
+    video_label.pack(pady=10)
+
+    detection_error = Label(img_capt, text="", fg="red", font=("Arial", 15))
+    detection_error.pack()
+
+    save_img = Button(img_capt, text="Save and Proceed", bg="lime", font=("Arial", 15), command=get_rows)
+
+    process.title("{} - All the Best!!!".format(transaction_type))
 
     Step3_Frame = Frame(process)
     Step3_Frame.pack()
@@ -627,9 +654,9 @@ def common(title):
 
     add_exit_prior_step_btn(prev_sc=img_capt, current_sc=process, next_sc=confirm)
 
-    confirm.title('{} - One Last Step to go'.format(title))
-    the_end=Tk()
-    the_end.title('{} - Thank You for Choosing Us!'.format(title))
+    confirm.title('{} - One Last Step to go'.format(transaction_type))
+    the_end = Toplevel()
+    the_end.title('{} - Thank You for Choosing Us!'.format(transaction_type))
     the_end.withdraw()
     the_end.geometry('1050x450+250+220')
     the_end.resizable(False, False)
@@ -637,7 +664,7 @@ def common(title):
     Label(the_end, text='''Now you are done. Thank you for choosing us!
     We hope you come next time; Till then, bye!''',
           font=('bold', 25), fg='blue', bg='light blue').pack()
-    Save_All_Data=Button(the_end, text='Save All Data', command=lambda:progressbar(title), bg='lime', font=('bold', 20))
+    Save_All_Data=Button(the_end, text='Save All Data', command=progressbar, bg='lime', font=('bold', 20))
     Save_All_Data.pack(pady=(20, 0))
     p=ttk.Progressbar(the_end, orient=HORIZONTAL, length=500, mode='indeterminate')
     p.pack(pady=20)
@@ -654,28 +681,6 @@ def extra_opt(Gender):
         Female_l.grid_forget()
         Female_o.grid_forget()
 
-img_capt = Tk()
-img_capt.geometry('1050x340+250+220')
-img_capt.resizable(False, False)
-img_capt.protocol("WM_DELETE_WINDOW", disable_event)
-img_capt.withdraw()
-confirm=Tk()
-Step4_Frame = Frame(confirm)
-Step4_Frame.pack()
-confirm.withdraw()
-confirm.protocol("WM_DELETE_WINDOW", disable_event)
-confirm.resizable(False, False)
-process=Tk()
-process.geometry('1050x390+250+220')
-process.resizable(False, False)
-process.protocol("WM_DELETE_WINDOW", disable_event)
-process.withdraw()
-confirm_fr=Frame(confirm)
-confirm_fr.pack()
-Label(confirm, text='Below are all the details you mentioned. Kindly check if they are correct as we shall record them!', font=25).pack(pady=10)
-
-
-Graphic_Design()
 
 def one_time_only(n):
     if n==0:
@@ -701,20 +706,66 @@ combostyle.theme_create('combostyle', parent='alt',
                         )
 combostyle.theme_use('combostyle')
 hide_img=True
-sc=Tk()
+
+root = Tk()
+root.withdraw()
+
+turtle_sc = Toplevel(root)
+turtle_sc.protocol("WM_DELETE_WINDOW", disable_event)
+turtle_sc.geometry('800x500+150+50')
+turtle_sc.resizable(False, False)
+turtle_sc.title('Rayyan Blood Donations')
+canvas=Canvas(master = turtle_sc, width = 800, height = 500)
+canvas.grid(padx=2, pady=2, row=0, column=0, rowspan=10, columnspan=10)
+screen = TurtleScreen(canvas)
+screen.register_shape('giphy.gif')
+t = RawTurtle(screen)
+b = RawTurtle(screen)
+b.shape('giphy.gif')
+turtle_sc.withdraw()
+
+sc = Toplevel(root)
 sc.resizable(False, False)
 sc.protocol("WM_DELETE_WINDOW", disable_event)
 sc.title('Select Your Action')
 sc.geometry('1500x650')
+sc.withdraw()
 
 selection=Label(sc, text="What would you like to do?", fg="black", font=('Courier', 50))
 selection.place(anchor=CENTER, relx=.5, rely=.1)
-sc_fr=Frame(sc)
+sc_fr = Frame(sc)
 sc_fr.place(anchor=CENTER, relx=.5, rely=.5)
-donate=Button(sc_fr, text="DONATE", fg="lime", bg='dark blue', width=30, height= 6, font=("bold", 20), command=lambda:common('Donations'))
+donate = Button(sc_fr, text="DONATE", fg="lime", bg='dark blue', width=30, height= 6, font=("bold", 20), command=lambda:common('Donations'))
 donate.grid(row=0, column=0, padx=(20, 10))
-recieve=Button(sc_fr, text="RECIEVE", fg="yellow", bg='red', width=30, height= 6, font=("bold", 20), command=lambda:common('Collections'))
+recieve = Button(sc_fr, text="RECIEVE", fg="yellow", bg='red', width=30, height= 6, font=("bold", 20), command=lambda:common('Recieve'))
 recieve.grid(row=0, column=2, padx=(10, 20))
-Exit=Button(sc_fr, text="EXIT", fg="white", bg='black', width=25, height= 6, font=("bold", 20), command=lambda:one_time_only(0))
+Exit = Button(sc_fr, text="EXIT", fg="white", bg='black', width=25, height= 6, font=("bold", 20), command=lambda:one_time_only(0))
 Exit.grid(row=0, column=1, padx=10)
-sc.mainloop()
+
+img_capt = Toplevel(root)
+img_capt.geometry('1050x850+250+220')
+img_capt.resizable(False, False)
+img_capt.protocol("WM_DELETE_WINDOW", disable_event)
+img_capt.withdraw()
+
+confirm = Toplevel(root)
+Step4_Frame = Frame(confirm)
+Step4_Frame.pack()
+confirm.protocol("WM_DELETE_WINDOW", disable_event)
+confirm.resizable(False, False)
+confirm.withdraw()
+
+process = Toplevel(root)
+process.geometry('1050x390+250+220')
+process.resizable(False, False)
+process.protocol("WM_DELETE_WINDOW", disable_event)
+process.withdraw()
+
+confirm_fr = Frame(confirm)
+confirm_fr.pack()
+Label(confirm, text='Below are all the details you mentioned. Kindly check if they are correct as we shall record them!', font=25).pack(pady=10)
+
+Graphic_Design()
+sc.deiconify()
+
+root.mainloop()
