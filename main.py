@@ -14,12 +14,12 @@ from PIL import Image, ImageTk
 pygame.init()
 original_dir = os.getcwd()
 
+
 def disable_event():
    pass
 
 
 def Graphic_Design():
-    global turtle_sc
     turtle_sc.deiconify()
     t.hideturtle()
     b.hideturtle()
@@ -62,21 +62,6 @@ def fly_to(x, y, turtle_):
         b.pendown()
 
 
-def get_rows():
-    conn = sqlite3.connect('User Profiles/Database.db')
-    cur = conn.cursor()
-
-    if transaction_type == "Donors":
-        os.chdir('User Profiles/Donors')
-    else:
-        os.chdir('User Profiles/Receivers')
-
-    cur.execute("SELECT * FROM {}".format(transaction_type))
-
-    cv2.imwrite(f'ID_[{current_id}].png', frame)
-    os.chdir(original_dir)
-
-
 def capt_img():
     global frame, capturing, webcam, face_detect_sample, coordinates
     for i in range(3):
@@ -90,7 +75,7 @@ def capt_img():
     save_img.pack_forget()
     coordinates = None
 
-    face_detect_sample = cv2.CascadeClassifier("haarcascade_frontalface_alt.xml")
+    face_detect_sample = cv2.CascadeClassifier("Assets/haarcascade_frontalface_alt.xml")
 
     update_frame()
 
@@ -153,9 +138,6 @@ def add_exit_prior_step_btn(prev_sc, next_sc, current_sc):
     global next_step_recurring, exit_prior_step_fr
     exit_prior_step_fr=Frame(current_sc)
     exit_prior_step_fr.pack(side=BOTTOM, pady=10, anchor=CENTER)
-    #SUB_FR=Frame(exit_prior_step_fr, relief='sunken', bg='lime', borderwidth=5)
-    #SUB_FR.grid(row=0, column=0)
-    #Label(SUB_FR, text='SAVE AND GO TO -', font='bold', bg='lime', fg='purple').grid(row=0, column=0)
     prior_step_recurring = Button(exit_prior_step_fr, text="Previous Step", fg="red", bg="white", font="bold", command=lambda:change_sc(prev_sc=prev_sc, current_sc=current_sc, mode="P", next_sc=0)).grid(padx=5, row=0, column=0, pady=5)
     next_step_recurring = Button(exit_prior_step_fr, text="Next Step", fg="red", bg="lime", font="bold", command=lambda:change_sc(next_sc=next_sc, current_sc=current_sc, mode="N", prev_sc=0))
     next_step_recurring.grid(padx=5, row=0, column=1, pady=5)
@@ -164,7 +146,7 @@ def add_exit_prior_step_btn(prev_sc, next_sc, current_sc):
         if bool(next_step_recurring.winfo_ismapped()) == True:
            next_step_recurring.grid_forget()
     Exit_recurring = Button(exit_prior_step_fr, text="Exit", fg="red", bg="white", font="bold", command=lambda:change_sc(current_sc=current_sc, mode="E", prev_sc=0, next_sc=0)).grid(padx=5, row=0, column=2)
-    if current_sc==sc_donate_collect:
+    if current_sc==input_data:
         restart_recurring = Button(exit_prior_step_fr, text="Clear", fg="red", bg="white", font="bold",
                                    command=lambda:clear_sc(0)).grid(padx=5, row=0, column=3)
 
@@ -194,8 +176,8 @@ def clear_sc(stat):
 def verify_details():
     try:
         if int(Age_input.get())>65:
-            sc_donate_collect.withdraw()
-            tk_messagebox.showinfo("Information", "Sorry... You cannot donate blood asyou are above 65 years of age. ")
+            input_data.withdraw()
+            tk_messagebox.showinfo("Information", "Sorry... You cannot donate blood as you are above 65 years of age. ")
             error = 1
             return()
         elif int(Age_input.get()) < 18:
@@ -287,13 +269,21 @@ def verify_details():
         weight=Label(details_fr, fg='red', text='Kindly input your weight')
         weight.grid(row=7, column=2)
         error=1
-        change_sc(0, img_capt, sc_donate_collect, 'N')
+        change_sc(0, img_capt, input_data, 'N')
 
 def show_data():
     global Name_c, Age_c, Gender_c, Female_c, Frequency_c, Blood_group_c, Contact_Number_c, Email_id_c, Pulse_rate_c,\
         Height_c, Weight_c, Restrictions_c, Consumptions_c
-    Step4_1 = Label(Step4_Frame, text="Step 4:", font=('Courier', 30), borderwidth=2, relief="solid").grid(row=0, column=0)
-    Step4_2 = Label(Step4_Frame, text='Confirm Your Details', font=('Courier', 30)).grid(row=0, column=1)
+
+    Step4_fr = Frame(confirm)
+    Step4_fr.pack()
+    Label(Step4_fr, text="Step 4:", font=('Courier', 30), borderwidth=2, relief="solid").grid(row=0, column=0)
+    Label(Step4_fr, text='Confirm Your Details', font=('Courier', 30)).grid(row=0, column=1)
+
+    confirm_fr = Frame(confirm)
+    confirm_fr.pack()
+    Label(confirm, text='Below are all the details you mentioned. Kindly check if they are correct as we shall record them!', font=25).pack(pady=10)
+
     Label(confirm_fr, text='Name', fg='blue', font=20).grid(row=0, column=0)
     Name_c=Entry(confirm_fr, font=20)
     Name_c.delete(0, 'end')
@@ -382,8 +372,16 @@ def show_data():
 
     #confirm.update()
 def change_sc(prev_sc, next_sc, current_sc, mode):
-    if mode!='E' or next_sc!=img_capt or prev_sc!=sc:
+    if mode == 'E' or prev_sc == sc:
+        return
+    else:
         current_sc.withdraw()
+    
+    if current_sc == img_capt:
+        try:
+            stop_camera()
+        except NameError:
+            pass
     if mode=="P":
         prev_sc.deiconify()
         if prev_sc==process:
@@ -395,7 +393,7 @@ def change_sc(prev_sc, next_sc, current_sc, mode):
             Start_capture.flash()
     elif mode=="N":
         next_sc.deiconify()
-        if next_sc==sc_donate_collect:
+        if next_sc==input_data:
             skip_this_fun=1
         if next_sc!=img_capt:
             next_sc.deiconify()
@@ -426,10 +424,6 @@ def change_sc(prev_sc, next_sc, current_sc, mode):
         else:
             current_sc.deiconify()
 
-def sc_show():
-    notification.withdraw()
-    sc_donate_collect.deiconify()
-
 
 def convertToBinaryData(filename):
     # Convert digital data to binary format
@@ -437,11 +431,10 @@ def convertToBinaryData(filename):
         blobData = file.read()
     return blobData
 
-def insertBLOB(photo):
-    os.chdir('User Profiles')
-    conn = sqlite3.connect('Database.db')
+def insertBLOB(id):
+    conn = sqlite3.connect('User Profiles/Database.db')
     cursor = conn.cursor()
-    empPhoto = convertToBinaryData(photo)
+    empPhoto = convertToBinaryData("User Profiles/{}/ID_[{}]".format(transaction_type, current_id))
     lst=[current_id, Name_c.get(), Age_c.get(), Gender_c.get(), Female_c.get(), Frequency_c.get(), Blood_group_c.get(),
      Contact_Number_c.get(), Email_id_c.get(), Pulse_rate_c,
      Height_c, Weight_c, Restrictions_c, Consumptions_c, empPhoto]
@@ -453,7 +446,6 @@ def insertBLOB(photo):
      Height_c, Weight_c, Restrictions_c, Consumptions_c, empPhoto))
     conn.commit()
     print("Image and file inserted successfully as a BLOB into a table")
-    os.chdir(original_dir)
 
 def progressbar():
     p.config(mode='determinate')
@@ -469,67 +461,34 @@ def progressbar():
     the_end.withdraw()
     saved.forget()
 
-    if transaction_type == "Donors":
-        os.chdir('User Profiles/Donors')
-    else:
-        os.chdir('User Profiles/Receivers')
-
-    insertBLOB(f'ID_[{current_id}].png', transaction_type)
+    insertBLOB(current_id)
     one_time_only(1)
 
-    os.chdir(original_dir)
 
 def common(type):
     global transaction_type, current_id, img_capt, video_label, detection_error, save_img
 
     transaction_type = type
 
-    os.chdir('User Profiles')
-    conn = sqlite3.connect('Database.db')
+    conn = sqlite3.connect('User Profiles/Database.db')
     cur = conn.cursor()
     cur.execute("SELECT * FROM {}".format(transaction_type))
     current_id = len(cur.fetchall()) + 1
 
-
-    hide_img=True
     sc.withdraw()
-    global sc_donate_collect, details_fr, Name_input, Age_input, Gender_o, Contact_Number_input, Email_id_input,\
+    input_data.deiconify()
+
+    global details_fr, Name_input, Age_input, Gender_o, Contact_Number_input, Email_id_input,\
         Female_o, Consumptions_o, Frequency_o, Address_input, Pulse_rate_input, Blood_group_o, Height_input,\
-        Weight_input, Restrictions_o, Female_l, notification, Start_capture, p, the_end
+        Weight_input, Restrictions_o, Female_l, Start_capture, p
 
-    notification = Toplevel(root)
-    notification.geometry('1200x200+50+20')
-    notification.protocol("WM_DELETE_WINDOW", disable_event)
-    notification.resizable(False, False)
-    notification.title('Notification')
-
-    os.chdir(original_dir)
-    pic1=Canvas(master=notification, width = 200, height = 200, bg='white')
-    pic1.pack(side=LEFT)
-    pic_screen1 = TurtleScreen(pic1)
-    pic_screen1.register_shape('Info_Icon.gif')
-    draw1 = RawTurtle(pic_screen1)
-    draw1.shape('Info_Icon.gif')
-    draw1.goto(0, 0)
-
-    Label(notification, text='''In the whole software, If you need to input any other
-    input which is not in the options of the menu, then you can directly type there (like an entry). If you need
-    to input more than one item, after each name (except the last) put a comma and space then type.''', font=20).pack()
-    Button(notification, text='Okay', command=sc_show, font=25, width=20).pack(pady=10)
-
-    sc_donate_collect = Toplevel(root)
-    sc_donate_collect.withdraw()
-    sc_donate_collect.geometry('1450x790+50+0')
-    confirm.geometry('1450x800+50+0')
-    sc_donate_collect.resizable(False, False)
-    sc_donate_collect.protocol("WM_DELETE_WINDOW", disable_event)
-    sc_donate_collect.title("{} - Let's Start".format(transaction_type))
-    Step1_Frame=Frame(sc_donate_collect)
+    input_data.title("{} - Let's Start".format(transaction_type))
+    Step1_Frame=Frame(input_data)
     Step1_Frame.pack()
     Label(Step1_Frame, text="Step 1:", font=('Courier', 30), borderwidth=2, relief="solid").grid(row=0, column=0)
     Label(Step1_Frame, text= 'Fill in to register', font=('Courier', 30)).grid(row=0, column=1)
 
-    details_fr = Listbox(sc_donate_collect, bg='yellow')
+    details_fr = Listbox(input_data, bg='yellow')
     details_fr.pack(pady=(10, 0), fill=X, padx=15)
 
     Label(details_fr, text="Name", bg='yellow', fg="blue", font=20, height=1).grid(row=0, column=0, padx=10, pady=10)
@@ -630,7 +589,7 @@ def common(type):
     detection_error = Label(img_capt, text="", fg="red", font=("Arial", 15))
     detection_error.pack()
 
-    save_img = Button(img_capt, text="Save and Proceed", bg="lime", font=("Arial", 15), command=get_rows)
+    save_img = Button(img_capt, text="Save and Proceed", bg="lime", font=("Arial", 15), command=lambda:cv2.imwrite('User Profiles/{}/ID_[{}].png'.format(transaction_type, current_id), frame))
 
     process.title("{} - All the Best!!!".format(transaction_type))
 
@@ -645,20 +604,17 @@ def common(type):
     pic=Canvas(master=process, width = 200, height = 200)
     pic.pack()
     pic_screen = TurtleScreen(pic)
-    pic_screen.register_shape('good_luck.gif')
+    pic_screen.register_shape('Assets/good_luck.gif')
     draw = RawTurtle(pic_screen)
-    draw.shape('good_luck.gif')
+    draw.shape('Assets/good_luck.gif')
     draw.goto(0, 0)
 
     add_exit_prior_step_btn(prev_sc=img_capt, current_sc=process, next_sc=confirm)
 
     confirm.title('{} - One Last Step to go'.format(transaction_type))
-    the_end = Toplevel()
+    
     the_end.title('{} - Thank You for Choosing Us!'.format(transaction_type))
-    the_end.withdraw()
-    the_end.geometry('1050x450+250+220')
-    the_end.resizable(False, False)
-    the_end.protocol("WM_DELETE_WINDOW", disable_event)
+
     Label(the_end, text='''Now you are done. Thank you for choosing us!
     We hope you come next time; Till then, bye!''',
           font=('bold', 25), fg='blue', bg='light blue').pack()
@@ -668,8 +624,9 @@ def common(type):
     p.pack(pady=20)
 
     add_exit_prior_step_btn(prev_sc=process, current_sc=confirm, next_sc=the_end)
-    add_exit_prior_step_btn(prev_sc=sc_donate_collect, current_sc=img_capt, next_sc=process)
-    add_exit_prior_step_btn(prev_sc=sc, current_sc=sc_donate_collect, next_sc=img_capt)
+    add_exit_prior_step_btn(prev_sc=input_data, current_sc=img_capt, next_sc=process)
+    add_exit_prior_step_btn(prev_sc=sc, current_sc=input_data, next_sc=img_capt)
+
 
 def extra_opt(Gender):
     if Gender=='Female':
@@ -703,7 +660,6 @@ combostyle.theme_create('combostyle', parent='alt',
                                             }}}
                         )
 combostyle.theme_use('combostyle')
-hide_img=True
 
 root = Tk()
 root.withdraw()
@@ -740,6 +696,15 @@ receive.grid(row=0, column=2, padx=(10, 20))
 Exit = Button(sc_fr, text="EXIT", fg="white", bg='black', width=25, height= 6, font=("bold", 20), command=lambda:one_time_only(0))
 Exit.grid(row=0, column=1, padx=10)
 
+Graphic_Design()    # starts animation
+sc.deiconify()      # once animation is done, the selection screen shows and from there on, code continues
+
+input_data = Toplevel(root)
+input_data.withdraw()
+input_data.geometry('1450x790+50+0')
+input_data.resizable(False, False)
+input_data.protocol("WM_DELETE_WINDOW", disable_event)
+
 img_capt = Toplevel(root)
 img_capt.geometry('1050x850+250+220')
 img_capt.resizable(False, False)
@@ -747,8 +712,7 @@ img_capt.protocol("WM_DELETE_WINDOW", disable_event)
 img_capt.withdraw()
 
 confirm = Toplevel(root)
-Step4_Frame = Frame(confirm)
-Step4_Frame.pack()
+confirm.geometry('1450x800+50+0')
 confirm.protocol("WM_DELETE_WINDOW", disable_event)
 confirm.resizable(False, False)
 confirm.withdraw()
@@ -759,11 +723,10 @@ process.resizable(False, False)
 process.protocol("WM_DELETE_WINDOW", disable_event)
 process.withdraw()
 
-confirm_fr = Frame(confirm)
-confirm_fr.pack()
-Label(confirm, text='Below are all the details you mentioned. Kindly check if they are correct as we shall record them!', font=25).pack(pady=10)
-
-Graphic_Design()
-sc.deiconify()
+the_end = Toplevel(root)
+the_end.geometry('1050x450+250+220')
+the_end.resizable(False, False)
+the_end.protocol("WM_DELETE_WINDOW", disable_event)
+the_end.withdraw()
 
 root.mainloop()
