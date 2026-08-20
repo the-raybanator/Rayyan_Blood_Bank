@@ -2,7 +2,6 @@ from turtle import RawTurtle, TurtleScreen
 from tkinter import *
 from tkinter import ttk
 import tkinter.messagebox as tk_messagebox
-import os
 import time
 import cv2
 import datetime
@@ -12,7 +11,6 @@ import sqlite3
 from PIL import Image, ImageTk
 
 pygame.init()
-original_dir = os.getcwd()
 
 
 def disable_event():
@@ -20,46 +18,51 @@ def disable_event():
 
 
 def Graphic_Design():
+    turtle_sc.title('Rayyan Blood Bank')
     turtle_sc.deiconify()
+
+    canvas = Canvas(master = turtle_sc, width = screen_length, height = screen_width)
+    canvas.grid(padx=2, pady=2, row=0, column=0, rowspan=10, columnspan=10)
+    screen = TurtleScreen(canvas)
+    screen.register_shape('Assets/giphy.gif')
+    t = RawTurtle(screen)
+    b = RawTurtle(screen)
+    b.shape('Assets/giphy.gif')
+
     t.hideturtle()
     b.hideturtle()
     b.penup()
-    b.goto(-260, -230)
+    b.goto(-450, -230)
     b.lt(90)
     b.showturtle()
     b.speed(1)
     b.bk(100)
 
-    fly_to(-190, 150, t)
+    fly_to(-300, 150, t)
     t.pencolor('blue')
     t.showturtle()
-    t.write("RAYYAN - ", font=('courier', 35, 'bold'))
+    t.write("RAYYAN - ", font=('courier', 50, 'bold'))
     t.pencolor('red')
-    fly_to(50, 160, t)
-    t.write("Your gateway to", font=('courier', 25))
-    fly_to(70, 130, t)
-    t.write("donate blood", font=('courier', 25))
+    fly_to(70, 175, t)
+    t.write("Your gateway to", font=('courier', 40))
+    fly_to(90, 110, t)
+    t.write("donate blood", font=('courier', 40))
     fly_to(-100, 30, t)
     t.pencolor("blue")
     t.pensize(3)
-    t.write('Give the gift of life', font=('arial', 25))
-    fly_to(-70, -35, t)
-    t.write("Donate blood!", font=('arial', 25))
-    time.sleep(1) #On final make it 4 seconds
+    t.write('Give the gift of life', font=('arial', 40))
+    fly_to(-70, -50, t)
+    t.write("Donate blood!", font=('arial', 40))
+    time.sleep(4) #On final make it 4 seconds
     t.reset()
     b.reset()
     turtle_sc.withdraw()
 
 
 def fly_to(x, y, turtle_):
-    if turtle_ == t:
-        t.penup()
-        t.goto(x, y)
-        t.pendown()
-    else:
-        b.penup()
-        b.goto(x, y)
-        b.pendown()
+    turtle_.penup()
+    turtle_.goto(x, y)
+    turtle_.pendown()
 
 
 def capt_img():
@@ -664,26 +667,24 @@ combostyle.theme_use('combostyle')
 root = Tk()
 root.withdraw()
 
-turtle_sc = Toplevel(root)
-turtle_sc.protocol("WM_DELETE_WINDOW", disable_event)
-turtle_sc.geometry('800x500+150+50')
-turtle_sc.resizable(False, False)
-turtle_sc.title('Rayyan Blood Bank')
-canvas=Canvas(master = turtle_sc, width = 800, height = 500)
-canvas.grid(padx=2, pady=2, row=0, column=0, rowspan=10, columnspan=10)
-screen = TurtleScreen(canvas)
-screen.register_shape('Assets/giphy.gif')
-t = RawTurtle(screen)
-b = RawTurtle(screen)
-b.shape('Assets/giphy.gif')
-turtle_sc.withdraw()
+screen_length = 1500
+screen_width = 850
 
+turtle_sc = Toplevel(root)
 sc = Toplevel(root)
-sc.resizable(False, False)
-sc.protocol("WM_DELETE_WINDOW", disable_event)
-sc.title('Select Your Action')
-sc.geometry('1500x650')
-sc.withdraw()
+input_data = Toplevel(root)
+img_capt = Toplevel(root)
+process = Toplevel(root)
+confirm = Toplevel(root)
+the_end = Toplevel(root)
+
+screens = [turtle_sc, sc, input_data, img_capt, process, confirm, the_end]
+
+for i in screens:
+    i.withdraw()
+    i.geometry(f"{screen_length}x{screen_width}+0+0")
+    i.resizable(False, False)
+    i.protocol("WM_DELETE_WINDOW", disable_event)
 
 selection=Label(sc, text="What would you like to do?", fg="black", font=('Courier', 50))
 selection.place(anchor=CENTER, relx=.5, rely=.1)
@@ -698,35 +699,5 @@ Exit.grid(row=0, column=1, padx=10)
 
 Graphic_Design()    # starts animation
 sc.deiconify()      # once animation is done, the selection screen shows and from there on, code continues
-
-input_data = Toplevel(root)
-input_data.withdraw()
-input_data.geometry('1450x790+50+0')
-input_data.resizable(False, False)
-input_data.protocol("WM_DELETE_WINDOW", disable_event)
-
-img_capt = Toplevel(root)
-img_capt.geometry('1050x850+250+220')
-img_capt.resizable(False, False)
-img_capt.protocol("WM_DELETE_WINDOW", disable_event)
-img_capt.withdraw()
-
-confirm = Toplevel(root)
-confirm.geometry('1450x800+50+0')
-confirm.protocol("WM_DELETE_WINDOW", disable_event)
-confirm.resizable(False, False)
-confirm.withdraw()
-
-process = Toplevel(root)
-process.geometry('1050x390+250+220')
-process.resizable(False, False)
-process.protocol("WM_DELETE_WINDOW", disable_event)
-process.withdraw()
-
-the_end = Toplevel(root)
-the_end.geometry('1050x450+250+220')
-the_end.resizable(False, False)
-the_end.protocol("WM_DELETE_WINDOW", disable_event)
-the_end.withdraw()
 
 root.mainloop()
