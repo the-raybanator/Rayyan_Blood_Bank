@@ -434,7 +434,7 @@ def convertToBinaryData(filename):
 def insertBLOB(id):
     conn = sqlite3.connect('User Profiles/Database.db')
     cursor = conn.cursor()
-    empPhoto = convertToBinaryData("User Profiles/{}/ID_[{}]".format(transaction_type, current_id))
+    empPhoto = convertToBinaryData("User Profiles/{}/ID_[{}].png".format(transaction_type, current_id))
     lst=[current_id, Name_c.get(), Age_c.get(), Gender_c.get(), Female_c.get(), Frequency_c.get(), Blood_group_c.get(),
      Contact_Number_c.get(), Email_id_c.get(), Pulse_rate_c,
      Height_c, Weight_c, Restrictions_c, Consumptions_c, empPhoto]
