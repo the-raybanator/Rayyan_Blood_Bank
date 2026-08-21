@@ -14,12 +14,42 @@ import face_detection
 pg.init()
 
 
+class UserData:
+    fg = "maroon"
+    bg = "pink" # bg of entire frame
+    input_bg = "mistyrose"   # bg of the entry/combobox fields
+    font=("Segoe UI", 15)
+
+    def __init__(self, index, name, widget_type, values=[], state="normal"):
+        self.index = index
+        self.widget_type = widget_type
+        self.data = StringVar() # the actual input of the user
+        self.isfilled = False
+
+        # Create the label and widget for each element
+        if index % 2 == 1:  # this logic is used to alternate data and equally spread them
+            row, column = ((index+1)//2-1, 0)
+        else:
+            row, column = (index//2-1, 2)
+        
+        Label(details_fr, text=name, fg=UserData.fg, bg=UserData.bg, font=UserData.font, anchor="w").grid(row=row, column=column, padx=(50,10), pady=15)
+
+        if self.widget_type == "entry":
+            self.widget = Entry(details_fr, textvariable=self.data, fg=UserData.fg, bg=UserData.input_bg, font=UserData.font)
+        elif self.widget_type == "dropdown":
+            self.widget = ttk.Combobox(details_fr, width=18, textvariable=self.data, values=values, state=state, style="TCombobox", font=UserData.font)
+
+        self.widget.grid(row=row, column=column+1)   # add widget to the screen
+
+
+
+
 def disable_event():    # used as formality for the screens
    pass
 
 
 def add_menu(prev_sc, next_sc, current_sc):  # creates the menu for each screen
-    menu_fr = Frame(current_sc)
+    menu_fr = Frame(current_sc, bg="maroon")
     menu_fr.pack(side=BOTTOM, pady=10, anchor=CENTER)
 
     Button(menu_fr, width=10, text="Previous", fg="black", bg="pink", font=("Segoe UI", 15, "bold"), command=lambda:change_sc(mode = "P", prev_sc = prev_sc, current_sc = current_sc)).grid(padx=5, row=0, column=0, pady=5)
@@ -29,6 +59,14 @@ def add_menu(prev_sc, next_sc, current_sc):  # creates the menu for each screen
     if current_sc == input_sc:    # add clear button just for the input screen
         Button(menu_fr, width=10, text="Clear", fg="black", bg="white", font=("Segoe UI", 15, "bold"), command=clear_sc).grid(padx=5, row=0, column=3)
 
+
+def add_title(sc, index, heading):
+    title_fr = Frame(sc)
+    title_fr.pack(pady=30)
+    Label(title_fr, text=f"Step {index}:", fg="white", bg="maroon", font=('Helvetica', 50, "bold"), borderwidth=2, relief="solid").grid(row=0, column=0)
+    Label(title_fr, text=heading, fg="white", bg="maroon", font=('Helvetica', 50, "bold")).grid(row=0, column=1)
+
+
 def clear_sc(warning=True):
     if warning:
         result = tk_messagebox.askquestion("Clear Data", '''Are you sure you want to clear all the data in this screen?
@@ -36,129 +74,79 @@ def clear_sc(warning=True):
         if result == 'yes':
             clear_sc(warning=False)
     else:
-        Name_input.delete(0, len(Name_input.get()))
-        Age_input.delete(0, len(Age_input.get()))
-        Gender_o.set('')
-        Female_o.set('')
-        Frequency_o.set('')
-        Blood_group_o.set('')
-        Contact_Number_input.delete(0, len(Contact_Number_input.get()))
-        Email_id_input.delete(0, len(Email_id_input.get()))
-        Address_input.delete(0, len(Address_input.get()))
-        Pulse_rate_input.delete(0, len(Pulse_rate_input.get()))
-        Height_input.delete(0, len(Height_input.get()))
-        Weight_input.delete(0, len(Weight_input.get()))
-        Restrictions_o.set('')
-        Consumptions_o.set('')
+        for i in lst_of_data:
+            i.data.set("")  # clears each entry
 
 def verify_details():
-    try:
-        if int(Age_input.get())>65:
-            input_sc.withdraw()
-            tk_messagebox.showinfo("Information", "Sorry... You cannot donate blood as you are above 65 years of age. ")
-            error = 1
-            return
-        elif int(Age_input.get()) < 18:
-            today = datetime.date.today()
-            age=Label(details_fr, text='You are young to donate! Come on {}'.format((18 - int(Age_input.get())) + int(today.year)), fg='red')
-            age.grid(row=1, column=2)
-        #elif  bool(age.winfo_ismapped())==True:
-         #   age.grid_forget()
+    global proceed_to_next
 
-    except:
-        age=Label(details_fr, text='Enter a valid age which is a number (in years)', fg='red')
-        age.grid(row=1, column=2)
-        error = 1
-    if Frequency_o.get()=='Yes':
-        frequency=Label(details_fr, fg='red', text='Sorry... You can donate blood once it has been more than 6 months since you last donated blood')
-        frequency.grid(row=2, column=2)
-    try:
-        x=int(Contact_Number_input.get())
-        while x != 0:
-            x //= 10
-            count += 1
-        if count != 10:
-            mobile_no=Label(details_fr, fg='red', text='Kindly Recheck your Mobile Number')
-            mobile_no.grid(row=3, column=2)
+    error = 0   # innocent until proven guilty
+
+    for i in lst_of_data:
+        if i.data.get() == "":
+            i.data.set("Empty field!")
+            error = 1
+        else:
+            i.isfilled = True
+
+    if gender.data.get() != "Female":
+        feminine.data.set("")
+
+    if age.isfilled:
+        try:
+            if not(18 <= int(age.data.get()) <= 65):
+                result = tk_messagebox.askquestion("Age Warning", "You are out of the ideal age range, proceed with caution and only if its an emergency.", icon='warning')
+                if result != 'yes':
+                    exit_func(input_sc)
+
+        except:
+            age.data.set('Enter age in numbers')
             error = 1
 
-    except:
-        mobile_no=Label(details_fr, fg='red', text='Kindly Recheck your Mobile Number')
-        mobile_no.grid(row=3, column=2)
-        error = 1
+    if frequency.data.get() == 'Yes':
+        result = tk_messagebox.askquestion("Frequency Warning", "You have donated/received blood too recently, it can be risky. Proceed with caution and only if its an emergency.", icon='warning')
+        if result != 'yes':
+            exit_func(input_sc)
 
-    if Restrictions_o.get()=='':
-        restrictions=Label(details_fr, fg='red', text='Please select if you are facing the following')
-        restrictions.grid(row=11, column=2)
-        error = 1
-    elif Restrictions_o.get()!='(None)' and Restrictions_o.get()!='':
-        restrictions=Label(details_fr, fg='red', text='Get well then come to donate!')
-        restrictions.grid(row=11, column=2)
+    if contact.data.get():
+        try:
+            int(contact.data.get())   # to make sure it is an number
+            if len(contact.data.get()) != 10:
+                contact.data.set("Invalid number.")
+                error = 1
 
-    if Consumptions_o.get()!='':
-        consumptions=Label(details_fr, fg='red', text="Please select if you consumed the following")
-        consumptions.grid(row=12, column=2)
-        error = 1
-    elif Consumptions_o.get()!='(None)' and Consumptions_o.get()!='':
-        consumptions=Label(details_fr, fg='red', text="Don't consume these then come to donate!")
-        consumptions.grid(row=12, column=2)
+        except:
+            contact.data.set("Invalid number.")
+            error = 1
 
-    if Female_o.get()=='Breastfeeding':
-        female=Label(details_fr, fg='red', text='Congratulations! But please come when you are not breastfeeding!')
-        female.grid(row=3, column=3)
+    if restrictions.data.get() != 'None' and restrictions.isfilled:
+        result = tk_messagebox.askquestion("Health Warning", "Your condition might worsen, it can be risky. Proceed with caution and only if its an emergency.", icon='warning')
+        if result != 'yes':
+            exit_func(input_sc)
 
-    elif Female_o.get()=='Pregnant':
-        female=Label(details_fr, fg='red', text='Congratulations! But please come when you are not pregnant!')
-        female.grid(row=3, column=3)
+    if consumptions.data.get() != 'None' and consumptions.isfilled:
+        if transaction_type == "Donors":
+            tk_messagebox.showwarning("Consumption Warning", "It is too risky to donate, you CANNOT PROCEED. Don't consume it and then come to donate, please.", icon="warning")
+            exit_func(input_sc)
+        else:
+            result = tk_messagebox.askquestion("Consumption Warning", "BE AWARE THAT THIS CAN BE RISKY. Proceed with caution and only if its an emergency.", icon='warning')
+            if result != 'yes':
+                exit_func(input_sc)
+        
 
-    elif Female_o.get()!='None of the above' and Gender_o.get()=='Female':
-        female=Label(details_fr, fg='red', text='Kindly choose and appropriate option')
-        female.grid(row=3, column=3)
-        error = 1
-    if Name_input.get()=='':
-        name=Label(details_fr, fg='red', text='Kindly input your name')
-        name.grid(row=0, column=2)
-        error = 1
-    if Gender_o.get()=='':
-        gender=Label(details_fr, fg='red', text='Kindly input your gender')
-        gender.grid(row=1, column=2)
-        error = 1
-    if Frequency_o.get()=='':
-        frequency=Label(details_fr, fg='red', text='Kindly input whether you donated blood within the last 6 months.')
-        frequency.grid(row=2, column=2)
-        error = 1
-    if Email_id_input.get()=='':
-        email_id=Label(details_fr, fg='red', text='Kindly input your email address')
-        email_id.grid(row=3, column=2)
-        error = 1
-    if Address_input.get()=='':
-        address=Label(details_fr, fg='red', text='Kindly input your home address')
-        address.grid(row=4, column=2)
-        error = 1
-    if Pulse_rate_input.get()=='':
-        pulse_rate=Label(details_fr, fg='red', text='Kindly input your pulse rate')
-        pulse_rate.grid(row=5, column=2)
-        error = 1
-    if Height_input.get()=='':
-        height=Label(details_fr, fg='red', text='Kindly input your height')
-        height.grid(row=6, column=2)
-        error = 1
-    if Weight_input.get()=='':
-        weight=Label(details_fr, fg='red', text='Kindly input your weight')
-        weight.grid(row=7, column=2)
-        error=1
+    if feminine.data.get() != 'None' and feminine.isfilled and feminine.data.get() != "":   # feminine.data.get() != "" ensures that it will ignore for when its not relevant
+        if transaction_type == "Donors":
+            tk_messagebox.showwarning("Feminine Warning", "It is too risky to donate, you CANNOT PROCEED. Come back later.", icon="warning")
+            exit_func(input_sc)
+        else:
+            result = tk_messagebox.askquestion("Feminine Warning", "BE AWARE THAT THIS CAN BE RISKY. Proceed with caution and only if its an emergency.", icon='warning')
+            if result != 'yes':
+                exit_func(input_sc)
+
     if error == 0:
-        change_sc(0, img_capt, input_sc, 'N')
+        proceed_to_next = True
 
 def show_data():
-    global Name_c, Age_c, Gender_c, Female_c, Frequency_c, Blood_group_c, Contact_Number_c, Email_id_c, Pulse_rate_c,\
-        Height_c, Weight_c, Restrictions_c, Consumptions_c
-
-    Step4_fr = Frame(confirm)
-    Step4_fr.pack()
-    Label(Step4_fr, text="Step 4:", font=('Courier', 30), borderwidth=2, relief="solid").grid(row=0, column=0)
-    Label(Step4_fr, text='Confirm Your Details', font=('Courier', 30)).grid(row=0, column=1)
-
     confirm_fr = Frame(confirm)
     confirm_fr.pack()
     Label(confirm, text='Below are all the details you mentioned. Kindly check if they are correct as we shall record them!', font=25).pack(pady=10)
@@ -249,51 +237,41 @@ def show_data():
     Consumptions_c.insert(0, Consumptions_o.get())
     Consumptions_c.grid(padx=(15, 0), pady=10, row=12, column=1)
 
-    #confirm.update()
+
 def change_sc(mode, current_sc, prev_sc = 0, next_sc = 0):
     if prev_sc == sc:
         return
 
-    current_sc.withdraw()
-    
     try:        # we use try except to ensure code continues even if camera was closed
         face_detection.stop_camera()
     except:
-        pass
+         pass
 
-    if current_sc == process:
-        pg.mixer.music.load('Assets/Peaceful_Music.wav')
-        pg.mixer.music.stop()
+    pg.mixer.music.load('Assets/Peaceful_Music.wav')
+    pg.mixer.music.stop()
+    
+    if mode == "E":
+        exit_func(current_sc)
+        return
     
     if mode == "P":
+        current_sc.withdraw()
         prev_sc.deiconify()
         if prev_sc == process:
             pg.mixer.music.load('Assets/Peaceful_Music.wav')
             pg.mixer.music.play(-1)
     elif mode=="N":
-        next_sc.deiconify()
-        if next_sc == process:
-            pg.mixer.music.load('Assets/Peaceful_Music.wav')
-            pg.mixer.music.play(-1)
-        elif next_sc==the_end:
-            p['value']=0
-            p.config(mode='indeterminate')
-            the_end.update_idletasks()
-            p.start(10)
-
-    else:
-        result = tk_messagebox.askquestion("Exit", "Are you sure you exit? (Your data won't be saved...)",
-                                           icon='warning')
-        if result == 'yes':
+        if proceed_to_next:
             current_sc.withdraw()
-            clear_sc()
-            animation.draw()
-            sc.deiconify()
-            if current_sc==process:
+            next_sc.deiconify()
+            if next_sc == process:
                 pg.mixer.music.load('Assets/Peaceful_Music.wav')
-                pg.mixer.music.stop()
-        else:
-            current_sc.deiconify()
+                pg.mixer.music.play(-1)
+            elif next_sc==the_end:
+                p['value']=0
+                p.config(mode='indeterminate')
+                the_end.update_idletasks()
+                p.start(10) 
 
 
 def convertToBinaryData(filename):
@@ -302,9 +280,11 @@ def convertToBinaryData(filename):
         blobData = file.read()
     return blobData
 
+
 def insertBLOB(id):
     conn = sqlite3.connect('User Profiles/Database.db')
     cursor = conn.cursor()
+
     empPhoto = convertToBinaryData("User Profiles/{}/ID_[{}].png".format(transaction_type, current_id))
     lst=[current_id, Name_c.get(), Age_c.get(), Gender_c.get(), Female_c.get(), Frequency_c.get(), Blood_group_c.get(),
      Contact_Number_c.get(), Email_id_c.get(), Pulse_rate_c,
@@ -316,6 +296,9 @@ def insertBLOB(id):
      Contact_Number_c.get(), Email_id_c.get(), Pulse_rate_c,
      Height_c, Weight_c, Restrictions_c, Consumptions_c, empPhoto))
     conn.commit()
+
+    cursor.close()
+    conn.close()
     print("Image and file inserted successfully as a BLOB into a table")
 
 def progressbar():
@@ -333,149 +316,77 @@ def progressbar():
     saved.forget()
 
     insertBLOB(current_id)
-    one_time_only()
+    exit_func(the_end)
 
 
 def main(type):
-    global transaction_type, current_id, img_capt, video_label, detection_error, save_img
+    global transaction_type, current_id, lst_of_data, details_fr, p, proceed_to_next
+    global name, age, gender, frequency, blood_group, contact, email_id, address, pulse, height, weight, restrictions, consumptions, feminine
 
     transaction_type = type
 
     conn = sqlite3.connect('User Profiles/Database.db')
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM {}".format(transaction_type))
-    current_id = len(cur.fetchall()) + 1
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM {}".format(transaction_type))
+    current_id = len(cursor.fetchall()) + 1
+    cursor.close()
+    conn.close()
 
     sc.withdraw()
     input_sc.deiconify()
-
-    global details_fr, Name_input, Age_input, Gender_o, Contact_Number_input, Email_id_input,\
-        Female_o, Consumptions_o, Frequency_o, Address_input, Pulse_rate_input, Blood_group_o, Height_input,\
-        Weight_input, Restrictions_o, Female_l, Start_capture, p
+    proceed_to_next = False
 
     # STEP 1: ENTER GENERAL DATA
     input_sc.title("{} - Let's Start".format(transaction_type))
-    input_sc.config(bg="maroon")
-
+    add_title(input_sc, 1, "Fill In Your Details")
     add_menu(prev_sc=sc, current_sc=input_sc, next_sc=img_capt)
-
-    Step1_Frame=Frame(input_sc)
-    Step1_Frame.pack()
-    Label(Step1_Frame, text="Step 1:", font=('Courier', 30), borderwidth=2, relief="solid").grid(row=0, column=0)
-    Label(Step1_Frame, text= 'Fill in to register', font=('Courier', 30)).grid(row=0, column=1)
 
     details_fr = Listbox(input_sc, bg='pink')
     details_fr.pack(pady=(10, 0), fill=X, padx=15)
+    details_fr.grid_columnconfigure(0, weight=1)
+    details_fr.grid_columnconfigure(1, weight=1)
+    details_fr.grid_columnconfigure(2, weight=1)
+    details_fr.grid_columnconfigure(3, weight=1)
 
-    Label(details_fr, text="Name", bg='pink', fg="maroon", font=20, height=1).grid(row=0, column=0, padx=10, pady=10)
-    Name_input = Entry(details_fr, bg='pink', fg="maroon", font=20)
-    Name_input.grid(row=0, column=1)
-    Label(details_fr, text="Age", bg='pink', fg="maroon", font=20, height=1).grid(row=1, column=0, padx=10, pady=10)
-    Age_input=Entry(details_fr, bg='pink', fg="maroon", font=20)
-    Age_input.grid(row=1, column=1)
-
-    Label(details_fr, text="Gender: ", bg='pink', fg="maroon", font=20, height=1).grid(row=2, column=0, padx=10, pady=(10, 0))
-    Gender_o=ttk.Combobox(details_fr, width=18, font=20)
-    Gender_o['values'] = ('Male', 'Female')
-    Gender_o['state'] = 'readonly'
-    Gender_o.grid(column=1, row=2, pady=(10, 0))
-    Gender_o.current()
-
-    Label(details_fr, text=''' Did you donate
+    name = UserData(1, "Name", "entry")
+    age = UserData(2, "Age", "entry")
+    gender = UserData(3, "Gender", "dropdown", ['Male', 'Female', "Other (Type It)"])
+    frequency = UserData(4, ''' Did you donate
     blood during the
-    last six months: ''', bg='pink', fg="maroon", font=10, height=4).grid(row=3, column=0, padx=10, pady=0)
-    Frequency_o = ttk.Combobox(details_fr, width=18, font=20)
-    Frequency_o['values'] = ('Yes', 'No')
-    Frequency_o['state'] = 'readonly'
-    Frequency_o.grid(column=1, row=3)
-    Frequency_o.current()
+  last six months: ''', "dropdown", ["Yes", "No"], "readonly")
+    blood_group = UserData(5, "Blood Group", "dropdown", ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'], "readonly")
+    contact = UserData(6, "Contact Number", "entry")
+    email_id = UserData(7, "Email Address", "entry")
+    address = UserData(8, "Home Address", "entry")
+    pulse = UserData(9, "Pulse Rate", "entry")
+    height = UserData(10, "Height (in cm)", "entry")
+    weight = UserData(11, "Weight (in kg)", "entry")
+    restrictions = UserData(12, "Are you facing", "dropdown", ['None', 'Cold', 'Flu', 'Sore Throat', 'Cold Sore', 'Stomach Bug', 'Other (Type It)'])
+    consumptions = UserData(13, "Have you consumed", "dropdown", ['None', 'Alcohol', 'Fatty foods', 'Aspirin', 'Iron Blockers', 'Other (Type It)'])
+    feminine = UserData(14, '''FOR FEMALES
+Are you?''', "dropdown", ['None', 'Pregnant', 'Breastfreeding', "Other (Type It)"])
 
-    Label(details_fr, text="Blood Group: ", bg='pink', fg="maroon", font=20, height=1).grid(row=4, column=0, padx=10, pady=10)
-    Blood_group_o = ttk.Combobox(details_fr, width=18, font=20)
-    Blood_group_o['values'] = ('A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-')
-    Blood_group_o['state'] = 'readonly'
-    Blood_group_o.grid(column=1, row=4)
-    Blood_group_o.current()
+    lst_of_data = [name, age, gender, frequency, blood_group, contact, email_id, address, pulse, height, weight, restrictions, consumptions, feminine]
 
-    Label(details_fr, text="Contact Number", bg='pink', fg="maroon", font=20, height=1).grid(row=5, column=0, padx=10, pady=10)
-    Contact_Number_input = Entry(details_fr, bg='pink', fg="maroon", font=20)
-    Contact_Number_input.grid(row=5, column=1)
-
-    Label(details_fr, text="Email Address", bg='pink', fg="maroon", font=20, height=1).grid(row=6, column=0, padx=10, pady=10)
-    Email_id_input = Entry(details_fr, bg='pink', fg="maroon", font=20)
-    Email_id_input.grid(row=6, column=1)
-
-    Label(details_fr, text="Home Address", bg='pink', fg="maroon", font=20, height=1).grid(row=7, column=0, padx=10, pady=10)
-    Address_input = Entry(details_fr, bg='pink', fg="maroon", font=20)
-    Address_input.grid(row=7, column=1)
-
-    Label(details_fr, text="Pulse Rate", bg='pink', fg="maroon", font=20, height=1).grid(row=8, column=0, padx=10, pady=10)
-    Pulse_rate_input = Entry(details_fr, bg='pink', fg="maroon", font=20)
-    Pulse_rate_input.grid(row=8, column=1)
-
-    Label(details_fr, text="Height (in cm)", bg='pink', fg="maroon", font=20, height=1).grid(row=9, column=0, padx=10, pady=10)
-    Height_input = Entry(details_fr, bg='pink', fg="maroon", font=20)
-    Height_input.grid(row=9, column=1)
-
-    Label(details_fr, text="Weight (in kg)", bg='pink', fg="maroon", font=20, height=1).grid(row=10, column=0, padx=10, pady=10)
-    Weight_input = Entry(details_fr, bg='pink', fg="maroon", font=20)
-    Weight_input.grid(row=10, column=1)
-
-    Restrictions_l = Label(details_fr, text="Are you facing: ", bg='pink', fg="maroon", font=20, height=1).grid(row=11, column=0, padx=10, pady=10)
-    Restrictions_o = ttk.Combobox(details_fr, width=18, font=20)
-    Restrictions_o['values'] = ('(None)', 'Cold', 'Flu', 'Sore Throat', 'Cold Sore', 'Stomach Bug')
-    Restrictions_o.grid(column=1, row=11)
-    Restrictions_o.current()
-    Other_R=Label(details_fr, text='''If you are facing any other infection other than the options of the left menu, type there. 
-    If its more than one infection, after each name (except the last) put a comma and space then type''', bg='pink', fg='green')
-
-    Consumptions_l = Label(details_fr, text="Today, have you comsumed:  ", bg='pink', fg="maroon", font=20, height=1).grid(row=12, column=0, padx=10, pady=(10, 0))
-    Consumptions_o = ttk.Combobox(details_fr, width=18, font=20)
-    Consumptions_o['values'] = ('(None)', 'Alcohol', 'Fatty foods', 'Aspirin', 'Iron Blockers')
-    Consumptions_o.grid(column=1, row=12)
-    Consumptions_o.current()
-    set_gender = Button(details_fr, text="Click me to Confirm Selected Gender",
-                        command=lambda: extra_opt(Gender_o.get()), font=20, height=1)
-    set_gender.grid(row=2, column=2, padx=(10, 0))
-    lbl = Label(details_fr, text='(You can change again)', bg='pink', font=20, height=1)
-    lbl.grid(row=2, column=3)
-
-    Female = StringVar()
-    Female_l = Label(details_fr, text="Are you: ", bg='pink', fg="maroon", font=20, height=1)
-    Female_o = ttk.Combobox(details_fr, width=27, textvariable=Female)
-    Female_o['values'] = ('Pregnant', 'Breastfeeding', 'None of the above')
-    Frequency_o['state'] = 'readonly'
-    Female_o.current()
-
-    Button(input_sc, text="Save Data", command=verify_details).pack()
+    Button(input_sc, text="Save Data", bg="lime", font=("Segoe UI", 15, "bold"), command=verify_details).pack()
 
     # STEP 2: FACE CAPTURE
     img_capt.title('{} - Note for Capturing Face'.format(transaction_type))
-
+    add_title(img_capt, 2, "Capture Your Image")
     add_menu(prev_sc=input_sc, current_sc=img_capt, next_sc=process)
 
-    Step2_Frame=Frame(img_capt)
-    Step2_Frame.pack(pady=10)
-    Step2_1 = Label(Step2_Frame, text="Step 2:", font=('Courier', 30), borderwidth=2, relief="solid").grid(row=0, column=0)
-    Step2_2=Label(Step2_Frame, text='Capture Your Image', font=('Courier', 30)).grid(row=0, column=1)
-
-    Description = Label(img_capt, font=25, text='''Your webcam will be on and you are requested to take a clear picture of yourself.
+    Label(img_capt, fg="mistyrose", bg="maroon", font=("Segoe UI", 15), text='''Your webcam will be on and you are requested to take a clear picture of yourself.
                 Your whole face should show fully. Try not to cover your face with sunglasses, cap, earmuffs, helmet etc.
-                Once the webcam switches on, click 'c' on your keyboard to capture the image...''')
-    Description.pack(pady=20)
+                Make sure to save your picture!''').pack(pady=20)
     
     face_detection.create_widgets(img_capt, transaction_type, current_id)
 
     # STEP 3: THE PROCESS
     process.title("{} - All the Best!!!".format(transaction_type))
 
-    Step3_Frame = Frame(process)
-    Step3_Frame.pack()
-    Step3_1 = Label(Step3_Frame, text="Step 3:", font=('Courier', 30), borderwidth=2, relief="solid").grid(row=0, column=0)
-    Step3_2 = Label(Step3_Frame, text='The main process', font=('Courier', 30)).grid(row=0, column=1)
+    add_title(process, 3, "The Main Process")
 
-    note = Label(process, text='''Now we shall collect your blood. If it is your first time then stay calm! We shall do very carefully. ALL THE BEST!!!''', font=20)
-    note.pack(pady=20)
+    Label(process, fg="mistyrose", bg="maroon", font=("Segoe UI", 15), text='''Now we shall collect your blood. If it is your first time then stay calm! We shall do very carefully. ALL THE BEST!!!''').pack(pady=20)
 
     pic=Canvas(master=process, width = 200, height = 200)
     pic.pack()
@@ -489,8 +400,10 @@ def main(type):
 
     # STEP 4: DOUBLE CHECK DATA BEFORE SENDING
     confirm.title('{} - One Last Step to go'.format(transaction_type))
-
+    add_title(confirm, 4, "Confirm Your Details")
     add_menu(prev_sc=process, current_sc=confirm, next_sc=the_end)
+
+    Label(confirm, fg="mistyrose", bg="maroon", font=("Segoe UI", 15), text="BE CAREFUL! Once you confirm, there is NO GOING BACK!!").pack()
 
     # STEP 5: SAVE DATA & CONCLUDE
     the_end.title('{} - Thank You for Choosing Us!'.format(transaction_type))
@@ -504,37 +417,22 @@ def main(type):
     p.pack(pady=20)
 
 
-def extra_opt(Gender):
-    if Gender=='Female':
-        Female_l.grid(row=2, column=4, padx=(25, 0))
-        Female_o.grid(column=5, row=2, padx=(0, 10))
-    else:
-        Female_l.grid_forget()
-        Female_o.grid_forget()
-
-
-def one_time_only(destroy=False):
+def exit_func(current_sc, destroy=False):
     if destroy:
-        result = tk_messagebox.askquestion("Exit", "Are you sure you exit? (Your data won't be saved...)",
+        result = tk_messagebox.askquestion("Exit", "Are you sure you want to quit program?",
                                        icon='warning')
         if result == 'yes':
-            animation.draw()
+            animation.draw(turtle_sc, screen_length, screen_width)
             root.destroy()
 
     else:
-        sc.deiconify()
+        result = tk_messagebox.askquestion("Exit", "Are you sure you exit? (Your data won't be saved...)",
+                                               icon='warning')
+        if result == 'yes':
+            current_sc.withdraw()
+            sc.deiconify()
 
-combostyle = ttk.Style()
 
-combostyle.theme_create('combostyle', parent='alt',
-                        settings={'TCombobox':
-                                        {'configure':
-                                            {'selectbackground': 'blue',
-                                            'fieldbackground': 'red',
-                                            'background': 'green'
-                                            }}}
-                        )
-combostyle.theme_use('combostyle')
 
 root = Tk()
 root.withdraw()
@@ -550,23 +448,51 @@ process = Toplevel(root)
 confirm = Toplevel(root)
 the_end = Toplevel(root)
 
+
+# style for the dropdown menus
+input_sc.option_add('*TCombobox*Listbox.font', UserData.font)       # these lines ensure that the entire dropdown menu is styled
+input_sc.option_add('*TCombobox*Listbox.background', UserData.input_bg)
+input_sc.option_add('*TCombobox*Listbox.foreground', UserData.fg)
+input_sc.option_add('*TCombobox*Listbox.selectBackground', UserData.fg)
+input_sc.option_add('*TCombobox*Listbox.selectForeground', UserData.input_bg)
+
+style = ttk.Style()
+style.theme_use("clam")
+
+style.configure("TCombobox",
+borderwidth=0,
+relief="flat",
+fieldbackground=UserData.input_bg,
+background=UserData.input_bg,
+foreground=UserData.fg,
+selectbackground=UserData.input_bg,
+selectforeground=UserData.fg,
+font=UserData.font)
+
+style.map("TCombobox",
+    fieldbackground=[('readonly', UserData.input_bg)],
+    background=[('readonly', UserData.input_bg)],
+    foreground=[('readonly', UserData.fg)],
+    selectbackground=[('readonly', UserData.input_bg)],
+    selectforeground=[('readonly', UserData.fg)])
+
 screens = [turtle_sc, sc, input_sc, img_capt, process, confirm, the_end]
 
 for i in screens:
     i.withdraw()
+    i.config(bg="maroon")
     i.geometry(f"{screen_length}x{screen_width}+0+0")
     i.resizable(False, False)
     i.protocol("WM_DELETE_WINDOW", disable_event)
 
-selection=Label(sc, text="What would you like to do?", fg="black", font=('Courier', 50))
-selection.place(anchor=CENTER, relx=.5, rely=.1)
+Label(sc, text="What would you like to do?", fg="black", font=('Courier', 50)).place(anchor=CENTER, relx=.5, rely=.1)
 sc_fr = Frame(sc)
 sc_fr.place(anchor=CENTER, relx=.5, rely=.5)
 donate = Button(sc_fr, text="DONATE", fg="lime", bg='dark blue', width=30, height= 6, font=("bold", 20), command=lambda:main('Donors'))
 donate.grid(row=0, column=0, padx=(20, 10))
 receive = Button(sc_fr, text="RECEIVE", fg="pink", bg='red', width=30, height= 6, font=("bold", 20), command=lambda:main('Receivers'))
 receive.grid(row=0, column=2, padx=(10, 20))
-Exit = Button(sc_fr, text="EXIT", fg="white", bg='black', width=25, height= 6, font=("bold", 20), command=lambda:one_time_only(True))
+Exit = Button(sc_fr, text="EXIT", fg="white", bg='black', width=25, height= 6, font=("bold", 20), command=lambda:exit_func(sc, destroy=True))
 Exit.grid(row=0, column=1, padx=10)
 
 animation.draw(turtle_sc, screen_length, screen_width)    # starts animation
