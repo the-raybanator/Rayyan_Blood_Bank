@@ -5,10 +5,12 @@ Things Already Fixed:
  - Cleaned up code
  - Rearranged files
  - Fixed camera bug
+ - Fix the verification process
 
 Things Left to Fix:
      - Sync with database
-     - Fix the verification process
+     - Complete rest of the flow
+     - Fix the data confirmation code
 
 
 Updates:
