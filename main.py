@@ -83,7 +83,8 @@ def verify_details():
     error = 0   # innocent until proven guilty
 
     for i in lst_of_data:
-        if i.data.get() == "":
+        if i.data.get() == "" or i.data.get() == "Empty field!":
+            i.isfilled = False
             i.data.set("Empty field!")
             error = 1
         else:
@@ -108,7 +109,7 @@ def verify_details():
         if result != 'yes':
             exit_func(input_sc)
 
-    if contact.data.get():
+    if contact.isfilled:
         try:
             int(contact.data.get())   # to make sure it is an number
             if len(contact.data.get()) != 10:
@@ -422,6 +423,7 @@ def exit_func(current_sc, destroy=False):
         result = tk_messagebox.askquestion("Exit", "Are you sure you want to quit program?",
                                        icon='warning')
         if result == 'yes':
+            sc.withdraw()
             animation.draw(turtle_sc, screen_length, screen_width)
             root.destroy()
 
@@ -429,6 +431,7 @@ def exit_func(current_sc, destroy=False):
         result = tk_messagebox.askquestion("Exit", "Are you sure you exit? (Your data won't be saved...)",
                                                icon='warning')
         if result == 'yes':
+            clear_sc(warning=False)
             current_sc.withdraw()
             sc.deiconify()
 
@@ -485,14 +488,14 @@ for i in screens:
     i.resizable(False, False)
     i.protocol("WM_DELETE_WINDOW", disable_event)
 
-Label(sc, text="What would you like to do?", fg="black", font=('Courier', 50)).place(anchor=CENTER, relx=.5, rely=.1)
-sc_fr = Frame(sc)
+Label(sc, text="What would you like to do?", fg="white", bg="maroon", font=('Courier', 50)).place(anchor=CENTER, relx=.5, rely=.1)
+sc_fr = Frame(sc, bg="maroon")
 sc_fr.place(anchor=CENTER, relx=.5, rely=.5)
-donate = Button(sc_fr, text="DONATE", fg="lime", bg='dark blue', width=30, height= 6, font=("bold", 20), command=lambda:main('Donors'))
+donate = Button(sc_fr, text="DONATE", fg="lime", bg='dark blue', width=30, height= 6, font=("Helvetica", 20, "bold"), command=lambda:main('Donors'))
 donate.grid(row=0, column=0, padx=(20, 10))
-receive = Button(sc_fr, text="RECEIVE", fg="pink", bg='red', width=30, height= 6, font=("bold", 20), command=lambda:main('Receivers'))
+receive = Button(sc_fr, text="RECEIVE", fg="pink", bg='red', width=30, height= 6, font=("Helvetica", 20, "bold"), command=lambda:main('Receivers'))
 receive.grid(row=0, column=2, padx=(10, 20))
-Exit = Button(sc_fr, text="EXIT", fg="white", bg='black', width=25, height= 6, font=("bold", 20), command=lambda:exit_func(sc, destroy=True))
+Exit = Button(sc_fr, text="EXIT", fg="white", bg='black', width=25, height= 6, font=("Helvetica", 20, "bold"), command=lambda:exit_func(sc, destroy=True))
 Exit.grid(row=0, column=1, padx=10)
 
 animation.draw(turtle_sc, screen_length, screen_width)    # starts animation
