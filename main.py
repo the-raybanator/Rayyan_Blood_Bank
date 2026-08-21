@@ -1,165 +1,40 @@
-from turtle import RawTurtle, TurtleScreen
 from tkinter import *
 from tkinter import ttk
 import tkinter.messagebox as tk_messagebox
+
+from turtle import RawTurtle, TurtleScreen
 import time
-import cv2
 import datetime
-import pygame
-from pygame import mixer
+import pygame as pg
 import sqlite3
-from PIL import Image, ImageTk
 
-pygame.init()
+import animation
+import face_detection
+
+pg.init()
 
 
-def disable_event():
+def disable_event():    # used as formality for the screens
    pass
 
 
-def Graphic_Design():
-    turtle_sc.title('Rayyan Blood Bank')
-    turtle_sc.deiconify()
+def add_menu(prev_sc, next_sc, current_sc):  # creates the menu for each screen
+    menu_fr = Frame(current_sc)
+    menu_fr.pack(side=BOTTOM, pady=10, anchor=CENTER)
 
-    canvas = Canvas(master = turtle_sc, width = screen_length, height = screen_width)
-    canvas.grid(padx=2, pady=2, row=0, column=0, rowspan=10, columnspan=10)
-    screen = TurtleScreen(canvas)
-    screen.register_shape('Assets/giphy.gif')
-    t = RawTurtle(screen)
-    b = RawTurtle(screen)
-    b.shape('Assets/giphy.gif')
+    Button(menu_fr, width=10, text="Previous", fg="black", bg="pink", font=("Segoe UI", 15, "bold"), command=lambda:change_sc(mode = "P", prev_sc = prev_sc, current_sc = current_sc)).grid(padx=5, row=0, column=0, pady=5)
+    Button(menu_fr, width=10, text="Next", fg="white", bg="red", font=("Segoe UI", 15, "bold"), command=lambda:change_sc(mode = "N", next_sc = next_sc, current_sc = current_sc)).grid(padx=5, row=0, column=1, pady=5)
+    Button(menu_fr, width=10, text="Exit", fg="white", bg="black", font=("Segoe UI", 15, "bold"), command=lambda:change_sc(mode = "E", current_sc = current_sc)).grid(padx=5, row=0, column=2)
 
-    t.hideturtle()
-    b.hideturtle()
-    b.penup()
-    b.goto(-450, -230)
-    b.lt(90)
-    b.showturtle()
-    b.speed(1)
-    b.bk(100)
+    if current_sc == input_sc:    # add clear button just for the input screen
+        Button(menu_fr, width=10, text="Clear", fg="black", bg="white", font=("Segoe UI", 15, "bold"), command=clear_sc).grid(padx=5, row=0, column=3)
 
-    fly_to(-300, 150, t)
-    t.pencolor('blue')
-    t.showturtle()
-    t.write("RAYYAN - ", font=('courier', 50, 'bold'))
-    t.pencolor('red')
-    fly_to(70, 175, t)
-    t.write("Your gateway to", font=('courier', 40))
-    fly_to(90, 110, t)
-    t.write("donate blood", font=('courier', 40))
-    fly_to(-100, 30, t)
-    t.pencolor("blue")
-    t.pensize(3)
-    t.write('Give the gift of life', font=('arial', 40))
-    fly_to(-70, -50, t)
-    t.write("Donate blood!", font=('arial', 40))
-    time.sleep(4) #On final make it 4 seconds
-    t.reset()
-    b.reset()
-    turtle_sc.withdraw()
-
-
-def fly_to(x, y, turtle_):
-    turtle_.penup()
-    turtle_.goto(x, y)
-    turtle_.pendown()
-
-
-def capt_img():
-    global frame, capturing, webcam, face_detect_sample, coordinates
-    for i in range(3):
-        Start_capture.flash()
-
-    capturing = True
-    webcam = cv2.VideoCapture(0)
-    Start_capture.configure(text="Click to capture", command=stop_camera)
-
-    detection_error.configure(text="")
-    save_img.pack_forget()
-    coordinates = None
-
-    face_detect_sample = cv2.CascadeClassifier("Assets/haarcascade_frontalface_alt.xml")
-
-    update_frame()
-
-
-def update_frame():
-    global coordinates, frame
-
-    if not capturing:
-        crop_preview()
-        return
-
-    ret, frame = webcam.read()
-    if ret:
-        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        detect_face = face_detect_sample.detectMultiScale(gray_frame, 1.05, 3)
-        for (x, y, w, h) in detect_face:
-            coordinates = ((x-10, y-40), (x + w + 10, y + h + 10))      # top left corner and bottom right corner of a rectangle
-            cv2.rectangle(frame, coordinates[0], coordinates[1], (255, 255, 255), 1)
-            
-
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        img = Image.fromarray(rgb_frame)
-        imgtk = ImageTk.PhotoImage(image=img, master=video_label)
-
-        video_label.imgtk = imgtk
-        video_label.configure(image=imgtk)
-
-    video_label.after(15, update_frame)  # ~66 fps cap; schedules the next call
-
-
-def crop_preview():
-    try:
-        (x1, y1), (x2, y2) = coordinates
-        cropped = frame[y1:y2, x1:x2]
-
-        rgb_cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
-        img = Image.fromarray(rgb_cropped)
-        imgtk = ImageTk.PhotoImage(image=img, master=video_label)
-        video_label.imgtk = imgtk  # keep a reference so it isn't garbage collected
-        video_label.configure(image=imgtk)
-    except:
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        img = Image.fromarray(rgb_frame)
-        imgtk = ImageTk.PhotoImage(image=img, master=video_label)
-        
-        video_label.imgtk = imgtk
-        video_label.configure(image=imgtk)
-        detection_error.configure(text="Unable to detect face, you can either proceed or retake")
-        
-    save_img.pack()
-
-def stop_camera():
-    global capturing
-    capturing = False
-    webcam.release()
-
-    Start_capture.configure(text="Click to Start Camera", command=capt_img)
-
-def add_exit_prior_step_btn(prev_sc, next_sc, current_sc):
-    global next_step_recurring, exit_prior_step_fr
-    exit_prior_step_fr=Frame(current_sc)
-    exit_prior_step_fr.pack(side=BOTTOM, pady=10, anchor=CENTER)
-    prior_step_recurring = Button(exit_prior_step_fr, text="Previous Step", fg="red", bg="white", font="bold", command=lambda:change_sc(prev_sc=prev_sc, current_sc=current_sc, mode="P", next_sc=0)).grid(padx=5, row=0, column=0, pady=5)
-    next_step_recurring = Button(exit_prior_step_fr, text="Next Step", fg="red", bg="lime", font="bold", command=lambda:change_sc(next_sc=next_sc, current_sc=current_sc, mode="N", prev_sc=0))
-    next_step_recurring.grid(padx=5, row=0, column=1, pady=5)
-    if current_sc!=img_capt:
-        next_step_recurring.grid(padx=5, row=0, column=1, pady=5)
-        if bool(next_step_recurring.winfo_ismapped()) == True:
-           next_step_recurring.grid_forget()
-    Exit_recurring = Button(exit_prior_step_fr, text="Exit", fg="red", bg="white", font="bold", command=lambda:change_sc(current_sc=current_sc, mode="E", prev_sc=0, next_sc=0)).grid(padx=5, row=0, column=2)
-    if current_sc==input_data:
-        restart_recurring = Button(exit_prior_step_fr, text="Clear", fg="red", bg="white", font="bold",
-                                   command=lambda:clear_sc(0)).grid(padx=5, row=0, column=3)
-
-def clear_sc(stat):
-    if stat==0:
+def clear_sc(warning=True):
+    if warning:
         result = tk_messagebox.askquestion("Clear Data", '''Are you sure you want to clear all the data in this screen?
         (Your data won't be saved...)''', icon='warning')
         if result == 'yes':
-            clear_sc(1)
-
+            clear_sc(warning=False)
     else:
         Name_input.delete(0, len(Name_input.get()))
         Age_input.delete(0, len(Age_input.get()))
@@ -179,10 +54,10 @@ def clear_sc(stat):
 def verify_details():
     try:
         if int(Age_input.get())>65:
-            input_data.withdraw()
+            input_sc.withdraw()
             tk_messagebox.showinfo("Information", "Sorry... You cannot donate blood as you are above 65 years of age. ")
             error = 1
-            return()
+            return
         elif int(Age_input.get()) < 18:
             today = datetime.date.today()
             age=Label(details_fr, text='You are young to donate! Come on {}'.format((18 - int(Age_input.get())) + int(today.year)), fg='red')
@@ -272,7 +147,8 @@ def verify_details():
         weight=Label(details_fr, fg='red', text='Kindly input your weight')
         weight.grid(row=7, column=2)
         error=1
-        change_sc(0, img_capt, input_data, 'N')
+    if error == 0:
+        change_sc(0, img_capt, input_sc, 'N')
 
 def show_data():
     global Name_c, Age_c, Gender_c, Female_c, Frequency_c, Blood_group_c, Contact_Number_c, Email_id_c, Pulse_rate_c,\
@@ -374,39 +250,31 @@ def show_data():
     Consumptions_c.grid(padx=(15, 0), pady=10, row=12, column=1)
 
     #confirm.update()
-def change_sc(prev_sc, next_sc, current_sc, mode):
-    if mode == 'E' or prev_sc == sc:
+def change_sc(mode, current_sc, prev_sc = 0, next_sc = 0):
+    if prev_sc == sc:
         return
-    else:
-        current_sc.withdraw()
+
+    current_sc.withdraw()
     
-    if current_sc == img_capt:
-        try:
-            stop_camera()
-        except NameError:
-            pass
-    if mode=="P":
+    try:        # we use try except to ensure code continues even if camera was closed
+        face_detection.stop_camera()
+    except:
+        pass
+
+    if current_sc == process:
+        pg.mixer.music.load('Assets/Peaceful_Music.wav')
+        pg.mixer.music.stop()
+    
+    if mode == "P":
         prev_sc.deiconify()
-        if prev_sc==process:
-            mixer.music.load('Assets/Peaceful_Music.wav')
-            mixer.music.play(-1)
-        elif img_capt==prev_sc:
-            mixer.music.load('Assets/Peaceful_Music.wav')
-            mixer.music.stop()
-            Start_capture.flash()
+        if prev_sc == process:
+            pg.mixer.music.load('Assets/Peaceful_Music.wav')
+            pg.mixer.music.play(-1)
     elif mode=="N":
         next_sc.deiconify()
-        if next_sc==input_data:
-            skip_this_fun=1
-        if next_sc!=img_capt:
-            next_sc.deiconify()
-        if next_sc==process:
-            mixer.music.load('Assets/Peaceful_Music.wav')
-            mixer.music.play(-1)
-        elif next_sc==confirm:
-            mixer.music.load('Assets/Peaceful_Music.wav')
-            mixer.music.stop()
-            show_data()
+        if next_sc == process:
+            pg.mixer.music.load('Assets/Peaceful_Music.wav')
+            pg.mixer.music.play(-1)
         elif next_sc==the_end:
             p['value']=0
             p.config(mode='indeterminate')
@@ -418,12 +286,12 @@ def change_sc(prev_sc, next_sc, current_sc, mode):
                                            icon='warning')
         if result == 'yes':
             current_sc.withdraw()
-            clear_sc('no_asking')
-            Graphic_Design()
+            clear_sc()
+            animation.draw()
             sc.deiconify()
             if current_sc==process:
-                mixer.music.load('Assets/Peaceful_Music.wav')
-                mixer.music.stop()
+                pg.mixer.music.load('Assets/Peaceful_Music.wav')
+                pg.mixer.music.stop()
         else:
             current_sc.deiconify()
 
@@ -465,10 +333,10 @@ def progressbar():
     saved.forget()
 
     insertBLOB(current_id)
-    one_time_only(1)
+    one_time_only()
 
 
-def common(type):
+def main(type):
     global transaction_type, current_id, img_capt, video_label, detection_error, save_img
 
     transaction_type = type
@@ -479,29 +347,34 @@ def common(type):
     current_id = len(cur.fetchall()) + 1
 
     sc.withdraw()
-    input_data.deiconify()
+    input_sc.deiconify()
 
     global details_fr, Name_input, Age_input, Gender_o, Contact_Number_input, Email_id_input,\
         Female_o, Consumptions_o, Frequency_o, Address_input, Pulse_rate_input, Blood_group_o, Height_input,\
         Weight_input, Restrictions_o, Female_l, Start_capture, p
 
-    input_data.title("{} - Let's Start".format(transaction_type))
-    Step1_Frame=Frame(input_data)
+    # STEP 1: ENTER GENERAL DATA
+    input_sc.title("{} - Let's Start".format(transaction_type))
+    input_sc.config(bg="maroon")
+
+    add_menu(prev_sc=sc, current_sc=input_sc, next_sc=img_capt)
+
+    Step1_Frame=Frame(input_sc)
     Step1_Frame.pack()
     Label(Step1_Frame, text="Step 1:", font=('Courier', 30), borderwidth=2, relief="solid").grid(row=0, column=0)
     Label(Step1_Frame, text= 'Fill in to register', font=('Courier', 30)).grid(row=0, column=1)
 
-    details_fr = Listbox(input_data, bg='yellow')
+    details_fr = Listbox(input_sc, bg='pink')
     details_fr.pack(pady=(10, 0), fill=X, padx=15)
 
-    Label(details_fr, text="Name", bg='yellow', fg="blue", font=20, height=1).grid(row=0, column=0, padx=10, pady=10)
-    Name_input=Entry(details_fr, bg='pink', fg="blue", font=20)
+    Label(details_fr, text="Name", bg='pink', fg="maroon", font=20, height=1).grid(row=0, column=0, padx=10, pady=10)
+    Name_input = Entry(details_fr, bg='pink', fg="maroon", font=20)
     Name_input.grid(row=0, column=1)
-    Label(details_fr, text="Age", bg='yellow', fg="blue", font=20, height=1).grid(row=1, column=0, padx=10, pady=10)
-    Age_input=Entry(details_fr, bg='pink', fg="blue", font=20)
+    Label(details_fr, text="Age", bg='pink', fg="maroon", font=20, height=1).grid(row=1, column=0, padx=10, pady=10)
+    Age_input=Entry(details_fr, bg='pink', fg="maroon", font=20)
     Age_input.grid(row=1, column=1)
 
-    Label(details_fr, text="Gender: ", bg='yellow', fg="blue", font=20, height=1).grid(row=2, column=0, padx=10, pady=(10, 0))
+    Label(details_fr, text="Gender: ", bg='pink', fg="maroon", font=20, height=1).grid(row=2, column=0, padx=10, pady=(10, 0))
     Gender_o=ttk.Combobox(details_fr, width=18, font=20)
     Gender_o['values'] = ('Male', 'Female')
     Gender_o['state'] = 'readonly'
@@ -510,49 +383,53 @@ def common(type):
 
     Label(details_fr, text=''' Did you donate
     blood during the
-    last six months: ''', bg='yellow', fg="blue", font=10, height=4).grid(row=3, column=0, padx=10, pady=0)
+    last six months: ''', bg='pink', fg="maroon", font=10, height=4).grid(row=3, column=0, padx=10, pady=0)
     Frequency_o = ttk.Combobox(details_fr, width=18, font=20)
     Frequency_o['values'] = ('Yes', 'No')
     Frequency_o['state'] = 'readonly'
     Frequency_o.grid(column=1, row=3)
     Frequency_o.current()
 
-    Label(details_fr, text="Blood Group: ", bg='yellow', fg="blue", font=20, height=1).grid(row=4, column=0, padx=10, pady=10)
+    Label(details_fr, text="Blood Group: ", bg='pink', fg="maroon", font=20, height=1).grid(row=4, column=0, padx=10, pady=10)
     Blood_group_o = ttk.Combobox(details_fr, width=18, font=20)
     Blood_group_o['values'] = ('A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-')
     Blood_group_o['state'] = 'readonly'
     Blood_group_o.grid(column=1, row=4)
     Blood_group_o.current()
 
-    Label(details_fr, text="Contact Number", bg='yellow', fg="blue", font=20, height=1).grid(row=5, column=0, padx=10, pady=10)
-    Contact_Number_input = Entry(details_fr, bg='pink', fg="blue", font=20)
+    Label(details_fr, text="Contact Number", bg='pink', fg="maroon", font=20, height=1).grid(row=5, column=0, padx=10, pady=10)
+    Contact_Number_input = Entry(details_fr, bg='pink', fg="maroon", font=20)
     Contact_Number_input.grid(row=5, column=1)
-    Label(details_fr, text="Email Address", bg='yellow', fg="blue", font=20, height=1).grid(row=6, column=0, padx=10, pady=10)
-    Email_id_input = Entry(details_fr, bg='pink', fg="blue", font=20)
+
+    Label(details_fr, text="Email Address", bg='pink', fg="maroon", font=20, height=1).grid(row=6, column=0, padx=10, pady=10)
+    Email_id_input = Entry(details_fr, bg='pink', fg="maroon", font=20)
     Email_id_input.grid(row=6, column=1)
-    Label(details_fr, text="Home Address", bg='yellow', fg="blue", font=20, height=1).grid(row=7, column=0, padx=10, pady=10)
-    Address_input = Entry(details_fr, bg='pink', fg="blue", font=20)
+
+    Label(details_fr, text="Home Address", bg='pink', fg="maroon", font=20, height=1).grid(row=7, column=0, padx=10, pady=10)
+    Address_input = Entry(details_fr, bg='pink', fg="maroon", font=20)
     Address_input.grid(row=7, column=1)
 
-    Label(details_fr, text="Pulse Rate", bg='yellow', fg="blue", font=20, height=1).grid(row=8, column=0, padx=10, pady=10)
-    Pulse_rate_input = Entry(details_fr, bg='pink', fg="blue", font=20)
+    Label(details_fr, text="Pulse Rate", bg='pink', fg="maroon", font=20, height=1).grid(row=8, column=0, padx=10, pady=10)
+    Pulse_rate_input = Entry(details_fr, bg='pink', fg="maroon", font=20)
     Pulse_rate_input.grid(row=8, column=1)
-    Label(details_fr, text="Height (in cm)", bg='yellow', fg="blue", font=20, height=1).grid(row=9, column=0, padx=10, pady=10)
-    Height_input = Entry(details_fr, bg='pink', fg="blue", font=20)
+
+    Label(details_fr, text="Height (in cm)", bg='pink', fg="maroon", font=20, height=1).grid(row=9, column=0, padx=10, pady=10)
+    Height_input = Entry(details_fr, bg='pink', fg="maroon", font=20)
     Height_input.grid(row=9, column=1)
-    Label(details_fr, text="Weight (in kg)", bg='yellow', fg="blue", font=20, height=1).grid(row=10, column=0, padx=10, pady=10)
-    Weight_input = Entry(details_fr, bg='pink', fg="blue", font=20)
+
+    Label(details_fr, text="Weight (in kg)", bg='pink', fg="maroon", font=20, height=1).grid(row=10, column=0, padx=10, pady=10)
+    Weight_input = Entry(details_fr, bg='pink', fg="maroon", font=20)
     Weight_input.grid(row=10, column=1)
 
-    Restrictions_l = Label(details_fr, text="Are you facing: ", bg='yellow', fg="blue", font=20, height=1).grid(row=11, column=0, padx=10, pady=10)
+    Restrictions_l = Label(details_fr, text="Are you facing: ", bg='pink', fg="maroon", font=20, height=1).grid(row=11, column=0, padx=10, pady=10)
     Restrictions_o = ttk.Combobox(details_fr, width=18, font=20)
     Restrictions_o['values'] = ('(None)', 'Cold', 'Flu', 'Sore Throat', 'Cold Sore', 'Stomach Bug')
     Restrictions_o.grid(column=1, row=11)
     Restrictions_o.current()
     Other_R=Label(details_fr, text='''If you are facing any other infection other than the options of the left menu, type there. 
-    If its more than one infection, after each name (except the last) put a comma and space then type''', bg='yellow', fg='green')
+    If its more than one infection, after each name (except the last) put a comma and space then type''', bg='pink', fg='green')
 
-    Consumptions_l = Label(details_fr, text="Today, have you comsumed:  ", bg='yellow', fg="blue", font=20, height=1).grid(row=12, column=0, padx=10, pady=(10, 0))
+    Consumptions_l = Label(details_fr, text="Today, have you comsumed:  ", bg='pink', fg="maroon", font=20, height=1).grid(row=12, column=0, padx=10, pady=(10, 0))
     Consumptions_o = ttk.Combobox(details_fr, width=18, font=20)
     Consumptions_o['values'] = ('(None)', 'Alcohol', 'Fatty foods', 'Aspirin', 'Iron Blockers')
     Consumptions_o.grid(column=1, row=12)
@@ -560,17 +437,22 @@ def common(type):
     set_gender = Button(details_fr, text="Click me to Confirm Selected Gender",
                         command=lambda: extra_opt(Gender_o.get()), font=20, height=1)
     set_gender.grid(row=2, column=2, padx=(10, 0))
-    lbl = Label(details_fr, text='(You can change again)', bg='yellow', font=20, height=1)
+    lbl = Label(details_fr, text='(You can change again)', bg='pink', font=20, height=1)
     lbl.grid(row=2, column=3)
 
     Female = StringVar()
-    Female_l = Label(details_fr, text="Are you: ", bg='yellow', fg="blue", font=20, height=1)
+    Female_l = Label(details_fr, text="Are you: ", bg='pink', fg="maroon", font=20, height=1)
     Female_o = ttk.Combobox(details_fr, width=27, textvariable=Female)
     Female_o['values'] = ('Pregnant', 'Breastfeeding', 'None of the above')
     Frequency_o['state'] = 'readonly'
     Female_o.current()
 
+    Button(input_sc, text="Save Data", command=verify_details).pack()
+
+    # STEP 2: FACE CAPTURE
     img_capt.title('{} - Note for Capturing Face'.format(transaction_type))
+
+    add_menu(prev_sc=input_sc, current_sc=img_capt, next_sc=process)
 
     Step2_Frame=Frame(img_capt)
     Step2_Frame.pack(pady=10)
@@ -582,18 +464,9 @@ def common(type):
                 Once the webcam switches on, click 'c' on your keyboard to capture the image...''')
     Description.pack(pady=20)
     
-    Start_capture = Button(img_capt, text='Click me to open webcam', command=capt_img, width=70,
-                           font=('bold', 25), activebackground='blue',activeforeground='white', fg='black', bg='lime')
-    Start_capture.pack()
+    face_detection.create_widgets(img_capt, transaction_type, current_id)
 
-    video_label = Label(img_capt)
-    video_label.pack(pady=10)
-
-    detection_error = Label(img_capt, text="", fg="red", font=("Arial", 15))
-    detection_error.pack()
-
-    save_img = Button(img_capt, text="Save and Proceed", bg="lime", font=("Arial", 15), command=lambda:cv2.imwrite('User Profiles/{}/ID_[{}].png'.format(transaction_type, current_id), frame))
-
+    # STEP 3: THE PROCESS
     process.title("{} - All the Best!!!".format(transaction_type))
 
     Step3_Frame = Frame(process)
@@ -612,10 +485,14 @@ def common(type):
     draw.shape('Assets/good_luck.gif')
     draw.goto(0, 0)
 
-    add_exit_prior_step_btn(prev_sc=img_capt, current_sc=process, next_sc=confirm)
+    add_menu(prev_sc=img_capt, current_sc=process, next_sc=confirm)
 
+    # STEP 4: DOUBLE CHECK DATA BEFORE SENDING
     confirm.title('{} - One Last Step to go'.format(transaction_type))
-    
+
+    add_menu(prev_sc=process, current_sc=confirm, next_sc=the_end)
+
+    # STEP 5: SAVE DATA & CONCLUDE
     the_end.title('{} - Thank You for Choosing Us!'.format(transaction_type))
 
     Label(the_end, text='''Now you are done. Thank you for choosing us!
@@ -625,10 +502,6 @@ def common(type):
     Save_All_Data.pack(pady=(20, 0))
     p=ttk.Progressbar(the_end, orient=HORIZONTAL, length=500, mode='indeterminate')
     p.pack(pady=20)
-
-    add_exit_prior_step_btn(prev_sc=process, current_sc=confirm, next_sc=the_end)
-    add_exit_prior_step_btn(prev_sc=input_data, current_sc=img_capt, next_sc=process)
-    add_exit_prior_step_btn(prev_sc=sc, current_sc=input_data, next_sc=img_capt)
 
 
 def extra_opt(Gender):
@@ -640,16 +513,15 @@ def extra_opt(Gender):
         Female_o.grid_forget()
 
 
-def one_time_only(n):
-    if n==0:
+def one_time_only(destroy=False):
+    if destroy:
         result = tk_messagebox.askquestion("Exit", "Are you sure you exit? (Your data won't be saved...)",
                                        icon='warning')
         if result == 'yes':
-            sc.destroy()
-            Graphic_Design()
+            animation.draw()
+            root.destroy()
 
     else:
-        Graphic_Design()
         sc.deiconify()
 
 combostyle = ttk.Style()
@@ -672,13 +544,13 @@ screen_width = 850
 
 turtle_sc = Toplevel(root)
 sc = Toplevel(root)
-input_data = Toplevel(root)
+input_sc = Toplevel(root)
 img_capt = Toplevel(root)
 process = Toplevel(root)
 confirm = Toplevel(root)
 the_end = Toplevel(root)
 
-screens = [turtle_sc, sc, input_data, img_capt, process, confirm, the_end]
+screens = [turtle_sc, sc, input_sc, img_capt, process, confirm, the_end]
 
 for i in screens:
     i.withdraw()
@@ -690,14 +562,15 @@ selection=Label(sc, text="What would you like to do?", fg="black", font=('Courie
 selection.place(anchor=CENTER, relx=.5, rely=.1)
 sc_fr = Frame(sc)
 sc_fr.place(anchor=CENTER, relx=.5, rely=.5)
-donate = Button(sc_fr, text="DONATE", fg="lime", bg='dark blue', width=30, height= 6, font=("bold", 20), command=lambda:common('Donors'))
+donate = Button(sc_fr, text="DONATE", fg="lime", bg='dark blue', width=30, height= 6, font=("bold", 20), command=lambda:main('Donors'))
 donate.grid(row=0, column=0, padx=(20, 10))
-receive = Button(sc_fr, text="RECEIVE", fg="yellow", bg='red', width=30, height= 6, font=("bold", 20), command=lambda:common('Receivers'))
+receive = Button(sc_fr, text="RECEIVE", fg="pink", bg='red', width=30, height= 6, font=("bold", 20), command=lambda:main('Receivers'))
 receive.grid(row=0, column=2, padx=(10, 20))
-Exit = Button(sc_fr, text="EXIT", fg="white", bg='black', width=25, height= 6, font=("bold", 20), command=lambda:one_time_only(0))
+Exit = Button(sc_fr, text="EXIT", fg="white", bg='black', width=25, height= 6, font=("bold", 20), command=lambda:one_time_only(True))
 Exit.grid(row=0, column=1, padx=10)
 
-Graphic_Design()    # starts animation
+animation.draw(turtle_sc, screen_length, screen_width)    # starts animation
+
 sc.deiconify()      # once animation is done, the selection screen shows and from there on, code continues
 
 root.mainloop()
