@@ -4,7 +4,6 @@ import tkinter.messagebox as tk_messagebox
 
 from turtle import RawTurtle, TurtleScreen
 import time
-import datetime
 import pygame as pg
 import sqlite3
 
@@ -18,30 +17,55 @@ class UserData:
     fg = "maroon"
     bg = "pink" # bg of entire frame
     input_bg = "mistyrose"   # bg of the entry/combobox fields
-    font=("Segoe UI", 15)
+    font = ("Segoe UI", 15)
+
 
     def __init__(self, index, name, widget_type, values=[], state="normal"):
         self.index = index
+        self.name = name
         self.widget_type = widget_type
+        self.values = values
+        self.state = state
+
         self.data = StringVar() # the actual input of the user
         self.isfilled = False
+        self.isnumber = False
 
+        self.create_widgets(details_fr)
+
+
+    def create_widgets(self, frame):
         # Create the label and widget for each element
-        if index % 2 == 1:  # this logic is used to alternate data and equally spread them
-            row, column = ((index+1)//2-1, 0)
+        if self.index % 2 == 1:  # this logic is used to alternate data and equally spread them
+            row, column = ((self.index+1)//2-1, 0)
         else:
-            row, column = (index//2-1, 2)
+            row, column = (self.index//2-1, 2)
         
-        Label(details_fr, text=name, fg=UserData.fg, bg=UserData.bg, font=UserData.font, anchor="w").grid(row=row, column=column, padx=(50,10), pady=15)
+        Label(frame, text=self.name, fg=UserData.fg, bg=UserData.bg, font=UserData.font, anchor="w").grid(row=row, column=column, padx=(50,10), pady=15)
 
         if self.widget_type == "entry":
-            self.widget = Entry(details_fr, textvariable=self.data, fg=UserData.fg, bg=UserData.input_bg, font=UserData.font)
+            self.widget = Entry(frame, textvariable=self.data, fg=UserData.fg, bg=UserData.input_bg, font=UserData.font)
         elif self.widget_type == "dropdown":
-            self.widget = ttk.Combobox(details_fr, width=18, textvariable=self.data, values=values, state=state, style="TCombobox", font=UserData.font)
+            self.widget = ttk.Combobox(frame, width=18, textvariable=self.data, values=self.values, state=self.state, style="TCombobox", font=UserData.font)
 
         self.widget.grid(row=row, column=column+1)   # add widget to the screen
 
 
+    def verify_numbers(self, msg="invalid input"):
+        if self.isfilled:
+            self.isnumber = False
+            try:
+                int(self.data.get())
+                self.isnumber = True    # if the user has inputted a number, it will
+            except:
+                self.data.set(msg)
+                return 1
+
+
+    def data_warning(self, heading, description):
+        result = tk_messagebox.askquestion(f"{heading} Warning", description, icon='warning')
+        if result != 'yes':
+            exit_func(input_sc)
 
 
 def disable_event():    # used as formality for the screens
@@ -57,7 +81,7 @@ def add_menu(prev_sc, next_sc, current_sc):  # creates the menu for each screen
     Button(menu_fr, width=10, text="Exit", fg="white", bg="black", font=("Segoe UI", 15, "bold"), command=lambda:change_sc(mode = "E", current_sc = current_sc)).grid(padx=5, row=0, column=2)
 
     if current_sc == input_sc:    # add clear button just for the input screen
-        Button(menu_fr, width=10, text="Clear", fg="black", bg="white", font=("Segoe UI", 15, "bold"), command=clear_sc).grid(padx=5, row=0, column=3)
+        Button(menu_fr, width=10, text="Clear", fg="black", bg="white", font=("Segoe UI", 15, "bold"), command=clear_data).grid(padx=5, row=0, column=3)
 
 
 def add_title(sc, index, heading):
@@ -67,15 +91,19 @@ def add_title(sc, index, heading):
     Label(title_fr, text=heading, fg="white", bg="maroon", font=('Helvetica', 50, "bold")).grid(row=0, column=1)
 
 
-def clear_sc(warning=True):
+def clear_data(warning=True):
+    global proceed_to_next
     if warning:
         result = tk_messagebox.askquestion("Clear Data", '''Are you sure you want to clear all the data in this screen?
         (Your data won't be saved...)''', icon='warning')
         if result == 'yes':
-            clear_sc(warning=False)
+            clear_data(warning=False)
     else:
         for i in lst_of_data:
             i.data.set("")  # clears each entry
+            i.isfilled = False
+            i.isnumber = False
+            proceed_to_next = False
 
 def verify_details():
     global proceed_to_next
@@ -83,56 +111,40 @@ def verify_details():
     error = 0   # innocent until proven guilty
 
     for i in lst_of_data:
-        if i.data.get() == "" or i.data.get() == "Empty field!":
-            i.isfilled = False
-            i.data.set("Empty field!")
-            error = 1
+        if i.data.get() in ["", "empty field", "invalid input"]:
+            if not(gender.data.get() != "Female" and i == feminine): # to ensure that feminine needs to be filled only when the female gender is selected
+                i.isfilled = False
+                i.data.set("empty field")
+                error = 1
         else:
             i.isfilled = True
 
-    if gender.data.get() != "Female":
-        feminine.data.set("")
-
-    if age.isfilled:
-        try:
-            if not(18 <= int(age.data.get()) <= 65):
-                result = tk_messagebox.askquestion("Age Warning", "You are out of the ideal age range, proceed with caution and only if its an emergency.", icon='warning')
-                if result != 'yes':
-                    exit_func(input_sc)
-
-        except:
-            age.data.set('Enter age in numbers')
+    for i in [age, contact, pulse, height, weight]:
+        i.verify_numbers()
+        if i.verify_numbers() == 1:
             error = 1
 
-    if frequency.data.get() == 'Yes':
-        result = tk_messagebox.askquestion("Frequency Warning", "You have donated/received blood too recently, it can be risky. Proceed with caution and only if its an emergency.", icon='warning')
-        if result != 'yes':
-            exit_func(input_sc)
-
-    if contact.isfilled:
-        try:
-            int(contact.data.get())   # to make sure it is an number
-            if len(contact.data.get()) != 10:
-                contact.data.set("Invalid number.")
-                error = 1
-
-        except:
+    if contact.isnumber:
+        if len(contact.data.get()) != 10:
             contact.data.set("Invalid number.")
             error = 1
 
+    if age.isnumber:
+        if not(18 <= int(age.data.get()) <= 65):
+            age.data_warning("Age", "You are out of the ideal age range, proceed with caution and only if its an emergency.")
+
+    if frequency.data.get() == 'Yes':
+        frequency.data_warning("Frequency", "You have donated/received blood too recently, it can be risky. Proceed with caution and only if its an emergency.")
+
     if restrictions.data.get() != 'None' and restrictions.isfilled:
-        result = tk_messagebox.askquestion("Health Warning", "Your condition might worsen, it can be risky. Proceed with caution and only if its an emergency.", icon='warning')
-        if result != 'yes':
-            exit_func(input_sc)
+        restrictions.data_warning("Health", "Your condition might worsen, it can be risky. Proceed with caution and only if its an emergency.")
 
     if consumptions.data.get() != 'None' and consumptions.isfilled:
         if transaction_type == "Donors":
             tk_messagebox.showwarning("Consumption Warning", "It is too risky to donate, you CANNOT PROCEED. Don't consume it and then come to donate, please.", icon="warning")
             exit_func(input_sc)
         else:
-            result = tk_messagebox.askquestion("Consumption Warning", "BE AWARE THAT THIS CAN BE RISKY. Proceed with caution and only if its an emergency.", icon='warning')
-            if result != 'yes':
-                exit_func(input_sc)
+            restrictions.data_warning("Consumption", "BE AWARE THAT THIS CAN BE RISKY. Proceed with caution and only if its an emergency.")
         
 
     if feminine.data.get() != 'None' and feminine.isfilled and feminine.data.get() != "":   # feminine.data.get() != "" ensures that it will ignore for when its not relevant
@@ -146,107 +158,20 @@ def verify_details():
 
     if error == 0:
         proceed_to_next = True
-
-def show_data():
-    confirm_fr = Frame(confirm)
-    confirm_fr.pack()
-    Label(confirm, text='Below are all the details you mentioned. Kindly check if they are correct as we shall record them!', font=25).pack(pady=10)
-
-    Label(confirm_fr, text='Name', fg='blue', font=20).grid(row=0, column=0)
-    Name_c=Entry(confirm_fr, font=20)
-    Name_c.delete(0, 'end')
-    Name_c.insert(0, Name_input.get())
-    Name_c.grid(padx=(15, 0), pady=10, row=0, column=1)
-
-    Label(confirm_fr, height=1, text='Age', fg='blue', font=20).grid(row=1, column=0)
-    Age_c = Entry(confirm_fr, font=20)
-    Age_c.delete(0, 'end')
-    Age_c.insert(0, Age_input.get())
-    Age_c.grid(padx=(15, 0), pady=10, row=1, column=1)
-
-    Label(confirm_fr, height=1, text='Gender', fg='blue', font=20).grid(row=2, column=0)
-    Gender_c = Entry(confirm_fr, font=20)
-    Gender_c.delete(0, 'end')
-    Gender_c.insert(0, Gender_o.get())
-    Gender_c.grid(padx=(15, 0), pady=10, row=2, column=1)
-
-    Label(confirm_fr, height=1, text='Are you:', fg='blue', font=20).grid(row=2, column=2)
-    Female_c = Entry(confirm_fr, font=20)
-    Female_c.delete(0, 'end')
-    Female_c.insert(0, Female_o.get())
-    Female_c.grid(padx=(15, 0), pady=10, row=2, column=3)
-
-    Label(confirm_fr, height=1, text='''   Did you donate
-    blood during the
-    last six months''', fg='blue', font=20).grid(row=3, column=0)
-    Frequency_c = Entry(confirm_fr, font=20)
-    Frequency_c.delete(0, 'end')
-    Frequency_c.insert(0, Frequency_o.get())
-    Frequency_c.grid(padx=(15, 0), pady=10, row=3, column=1)
-
-    Label(confirm_fr, height=1, text='Blood Group:', fg='blue', font=20).grid(row=4, column=0)
-    Blood_group_c = Entry(confirm_fr, font=20)
-    Blood_group_c.delete(0, 'end')
-    Blood_group_c.insert(0, Blood_group_o.get())
-    Blood_group_c.grid(padx=(15, 0), pady=10, row=4, column=1)
-
-    Label(confirm_fr, height=1, text='Contact Number', fg='blue', font=20).grid(row=5, column=0)
-    Contact_Number_c = Entry(confirm_fr, font=20)
-    Contact_Number_c.delete(0, 'end')
-    Contact_Number_c.insert(0, Contact_Number_input.get())
-    Contact_Number_c.grid(padx=(15, 0), pady=10, row=5, column=1)
-
-    Label(confirm_fr, height=1, text='Email Address', fg='blue', font=20).grid(row=6, column=0)
-    Email_id_c = Entry(confirm_fr, font=20)
-    Email_id_c.delete(0, 'end')
-    Email_id_c.insert(0, Email_id_input.get())
-    Email_id_c.grid(padx=(15, 0), pady=10, row=6, column=1)
-
-    Label(confirm_fr, height=1, text='Home Address', fg='blue', font=20).grid(row=7, column=0)
-    Address_c = Entry(confirm_fr, font=20)
-    Address_c.delete(0, 'end')
-    Address_c.insert(0, Address_input.get())
-    Address_c.grid(padx=(15, 0), pady=10, row=7, column=1)
-
-    Label(confirm_fr, height=1, text='Contact Number', fg='blue', font=20).grid(row=8, column=0)
-    Pulse_rate_c = Entry(confirm_fr, font=20)
-    Pulse_rate_c.delete(0, 'end')
-    Pulse_rate_c.insert(0, Pulse_rate_input.get())
-    Pulse_rate_c.grid(padx=(15, 0), pady=10, row=8, column=1)
-
-    Label(confirm_fr, height=1, text='Height (in cm)', fg='blue', font=20).grid(row=9, column=0)
-    Height_c = Entry(confirm_fr, font=20)
-    Height_c.delete(0, 'end')
-    Height_c.insert(0, Height_input.get())
-    Height_c.grid(padx=(15, 0), pady=10, row=9, column=1)
-
-    Label(confirm_fr, height=1, text='Weight (in kg)', fg='blue', font=20).grid(row=10, column=0)
-    Weight_c = Entry(confirm_fr, font=20)
-    Weight_c.delete(0, 'end')
-    Weight_c.insert(0, Weight_input.get())
-    Weight_c.grid(padx=(15, 0), pady=10, row=10, column=1)
-
-    Label(confirm_fr, height=1, text='Are you facing', fg='blue', font=20).grid(row=11, column=0)
-    Restrictions_c = Entry(confirm_fr, font=20)
-    Restrictions_c.delete(0, 'end')
-    Restrictions_c.insert(0, Restrictions_o.get())
-    Restrictions_c.grid(padx=(15, 0), pady=10, row=11, column=1)
-
-    Label(confirm_fr, height=1, text='Today, have you consumed', fg='blue', font=20).grid(row=12, column=0)
-    Consumptions_c = Entry(confirm_fr, font=20)
-    Consumptions_c.delete(0, 'end')
-    Consumptions_c.insert(0, Consumptions_o.get())
-    Consumptions_c.grid(padx=(15, 0), pady=10, row=12, column=1)
+    else:
+        proceed_to_next = False 
 
 
 def change_sc(mode, current_sc, prev_sc = 0, next_sc = 0):
+    global proceed_to_next
     if prev_sc == sc:
         return
 
-    try:        # we use try except to ensure code continues even if camera was closed
-        face_detection.stop_camera()
-    except:
-         pass
+    if not(next_sc == process and not face_detection.proceed_to_next): # to ensure that next btn is disabled if user hasnt captured yet
+        try:        # we use try except to ensure code continues even if camera was closed
+            face_detection.stop_camera()
+        except:
+            pass
 
     pg.mixer.music.load('Assets/Peaceful_Music.wav')
     pg.mixer.music.stop()
@@ -261,10 +186,17 @@ def change_sc(mode, current_sc, prev_sc = 0, next_sc = 0):
         if prev_sc == process:
             pg.mixer.music.load('Assets/Peaceful_Music.wav')
             pg.mixer.music.play(-1)
+
     elif mode=="N":
+        if (face_detection.proceed_to_next and current_sc == img_capt) or current_sc in [process, confirm]:   # to bypass the webcam stage and process, and confirmation
+            proceed_to_next = True
+
         if proceed_to_next:
+            proceed_to_next = False
+
             current_sc.withdraw()
             next_sc.deiconify()
+
             if next_sc == process:
                 pg.mixer.music.load('Assets/Peaceful_Music.wav')
                 pg.mixer.music.play(-1)
@@ -282,25 +214,36 @@ def convertToBinaryData(filename):
     return blobData
 
 
-def insertBLOB(id):
+def insertBLOB():
     conn = sqlite3.connect('User Profiles/Database.db')
-    cursor = conn.cursor()
 
     empPhoto = convertToBinaryData("User Profiles/{}/ID_[{}].png".format(transaction_type, current_id))
-    lst=[current_id, Name_c.get(), Age_c.get(), Gender_c.get(), Female_c.get(), Frequency_c.get(), Blood_group_c.get(),
-     Contact_Number_c.get(), Email_id_c.get(), Pulse_rate_c,
-     Height_c, Weight_c, Restrictions_c, Consumptions_c, empPhoto]
 
-    conn.execute('''INSERT INTO Donors(UNIQUE_ID, NAME, AGE, GENDER, FEMALE_CONDITIONS, LAST, BLOOD_GROUP, CONTACT_NUMBER, EMAIL_ID, PULSE_RATE, 
-            HEIGHT_(IN_CM), WEIGHT_(IN_KG), RESTRICTION(S), CONSUMPTION(S), PHOTOGRAPH)\
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (current_id, Name_c.get(), Age_c.get(), Gender_c.get(), Female_c.get(), Frequency_c.get(), Blood_group_c.get(),
-     Contact_Number_c.get(), Email_id_c.get(), Pulse_rate_c,
-     Height_c, Weight_c, Restrictions_c, Consumptions_c, empPhoto))
+    data_to_store = [i.data.get() for i in lst_of_data]
+    data_to_store.append(empPhoto)
+
+    conn.execute(f'''INSERT INTO {transaction_type} (
+    "NAME",
+    "AGE",
+    "GENDER",
+    "LAST VISITED",
+    "BLOOD GROUP",
+    "CONTACT NUMBER",
+    "EMAIL ID",
+    "HOME ADDRESS",
+    "PULSE RATE",
+    "HEIGHT",
+    "WEIGHT",
+    "RESTRICTIONS",
+    "CONSUMPTIONS",
+    "FEMININE",
+    "PHOTO")
+    
+    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+    data_to_store)
+    
     conn.commit()
-
-    cursor.close()
     conn.close()
-    print("Image and file inserted successfully as a BLOB into a table")
 
 def progressbar():
     p.config(mode='determinate')
@@ -309,15 +252,16 @@ def progressbar():
         p['value'] += 20
         the_end.update_idletasks()
         time.sleep(0.5)
-    saved=Label(the_end, text='Saved Successfully', fg='green', font=('bold', 20))
+    
+    saved = Label(the_end, text='Saved Successfully', fg='lime', bg="maroon", font=("Segoe UI", 25, "bold"))
     saved.pack()
     the_end.update()
     time.sleep(1)
     the_end.withdraw()
     saved.forget()
 
-    insertBLOB(current_id)
-    exit_func(the_end)
+    insertBLOB()
+    exit_func(the_end, show_warning=False)
 
 
 def main(type):
@@ -344,7 +288,8 @@ def main(type):
 
     details_fr = Listbox(input_sc, bg='pink')
     details_fr.pack(pady=(10, 0), fill=X, padx=15)
-    details_fr.grid_columnconfigure(0, weight=1)
+
+    details_fr.grid_columnconfigure(0, weight=1)        # used to ensure that the columns are equally wide and split across screen
     details_fr.grid_columnconfigure(1, weight=1)
     details_fr.grid_columnconfigure(2, weight=1)
     details_fr.grid_columnconfigure(3, weight=1)
@@ -369,16 +314,17 @@ Are you?''', "dropdown", ['None', 'Pregnant', 'Breastfreeding', "Other (Type It)
 
     lst_of_data = [name, age, gender, frequency, blood_group, contact, email_id, address, pulse, height, weight, restrictions, consumptions, feminine]
 
-    Button(input_sc, text="Save Data", bg="lime", font=("Segoe UI", 15, "bold"), command=verify_details).pack()
+    save_data_frame = Frame(input_sc, bg="maroon")
+    save_data_frame.pack(pady=(15,0))
+    Label(save_data_frame, text="Click to save, once data is verified you can proceed", fg="mistyrose", bg="maroon", font=("Segoe UI", 15, "bold")).grid(row=0, column=0)
+    Button(save_data_frame, text="Save Data", bg="lightgreen", height=1, font=("Segoe UI", 15, "bold"), command=verify_details).grid(row=0, column=1, padx=(15,0))
 
     # STEP 2: FACE CAPTURE
     img_capt.title('{} - Note for Capturing Face'.format(transaction_type))
     add_title(img_capt, 2, "Capture Your Image")
     add_menu(prev_sc=input_sc, current_sc=img_capt, next_sc=process)
 
-    Label(img_capt, fg="mistyrose", bg="maroon", font=("Segoe UI", 15), text='''Your webcam will be on and you are requested to take a clear picture of yourself.
-                Your whole face should show fully. Try not to cover your face with sunglasses, cap, earmuffs, helmet etc.
-                Make sure to save your picture!''').pack(pady=20)
+    Label(img_capt, fg="mistyrose", bg="maroon", font=("Segoe UI", 15), text="Your webcam will be on and you are requested to take a clear picture of yourself.").pack(pady=10)
     
     face_detection.create_widgets(img_capt, transaction_type, current_id)
 
@@ -404,7 +350,19 @@ Are you?''', "dropdown", ['None', 'Pregnant', 'Breastfreeding', "Other (Type It)
     add_title(confirm, 4, "Confirm Your Details")
     add_menu(prev_sc=process, current_sc=confirm, next_sc=the_end)
 
+    # Create an identical frame to display user data for verifying
+    confirm_fr = Listbox(confirm, bg='pink')
+    confirm_fr.pack(pady=(10, 0), fill=X, padx=15)
+
+    confirm_fr.grid_columnconfigure(0, weight=1)        # used to ensure that the columns are equally wide and split across screen
+    confirm_fr.grid_columnconfigure(1, weight=1)
+    confirm_fr.grid_columnconfigure(2, weight=1)
+    confirm_fr.grid_columnconfigure(3, weight=1)
+
     Label(confirm, fg="mistyrose", bg="maroon", font=("Segoe UI", 15), text="BE CAREFUL! Once you confirm, there is NO GOING BACK!!").pack()
+    
+    for i in lst_of_data:
+        i.create_widgets(confirm_fr)
 
     # STEP 5: SAVE DATA & CONCLUDE
     the_end.title('{} - Thank You for Choosing Us!'.format(transaction_type))
@@ -418,20 +376,23 @@ Are you?''', "dropdown", ['None', 'Pregnant', 'Breastfreeding', "Other (Type It)
     p.pack(pady=20)
 
 
-def exit_func(current_sc, destroy=False):
+def exit_func(current_sc, destroy=False, show_warning=True):
     if destroy:
-        result = tk_messagebox.askquestion("Exit", "Are you sure you want to quit program?",
-                                       icon='warning')
-        if result == 'yes':
-            sc.withdraw()
-            animation.draw(turtle_sc, screen_length, screen_width)
-            root.destroy()
+        sc.withdraw()
+        animation.draw(turtle_sc, screen_length, screen_width)
+        root.destroy()
 
     else:
         result = tk_messagebox.askquestion("Exit", "Are you sure you exit? (Your data won't be saved...)",
                                                icon='warning')
         if result == 'yes':
-            clear_sc(warning=False)
+            clear_data(warning=False)
+            face_detection.proceed_to_next = False
+
+            for i in [input_sc, img_capt, process, confirm, the_end]:
+                for widget in i.winfo_children():
+                    widget.destroy()
+            
             current_sc.withdraw()
             sc.deiconify()
 

@@ -1,6 +1,8 @@
 import cv2
-from PIL import Image, ImageTk
 from tkinter import *
+from PIL import Image, ImageTk
+
+proceed_to_next = False
 
 def initialize():
     global frame, capturing, webcam, face_detect_sample, coordinates
@@ -9,10 +11,11 @@ def initialize():
 
     capturing = True
     webcam = cv2.VideoCapture(0)
-    Start_capture.configure(text="Click to capture", command=stop_camera)
+    Start_capture.configure(text="Click to capture", command=lambda:stop_camera("save"))
 
     detection_error.configure(text="")
-    save_img.pack_forget()
+    save_btn.grid_forget()
+    save_btn.configure(text="Save Capture")
     coordinates = None
 
     face_detect_sample = cv2.CascadeClassifier("Assets/haarcascade_frontalface_alt.xml")
@@ -23,8 +26,11 @@ def initialize():
 def update_frame():
     global coordinates, frame
 
-    if not capturing:
+    if capturing == "save": # saves and closes camera
         crop_preview()
+        return
+    
+    if not capturing:   # simply closes camera
         return
 
     ret, frame = webcam.read()
@@ -47,44 +53,53 @@ def update_frame():
 
 
 def crop_preview():
+    global cropped
     try:
         (x1, y1), (x2, y2) = coordinates
         cropped = frame[y1:y2, x1:x2]
-
-        rgb_cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
-        img = Image.fromarray(rgb_cropped)
-        imgtk = ImageTk.PhotoImage(image=img, master=video_label)
-        video_label.imgtk = imgtk  # keep a reference so it isn't garbage collected
-        video_label.configure(image=imgtk)
     except:
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        img = Image.fromarray(rgb_frame)
-        imgtk = ImageTk.PhotoImage(image=img, master=video_label)
-        
-        video_label.imgtk = imgtk
-        video_label.configure(image=imgtk)
+        cropped = frame     # if face wasn't detecting, the frame will be untouched
         detection_error.configure(text="Unable to detect face, you can either proceed or retake")
+    
+    rgb_cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
+    img = Image.fromarray(rgb_cropped)
+    imgtk = ImageTk.PhotoImage(image=img, master=video_label)
+    video_label.imgtk = imgtk  # keep a reference so it isn't garbage collected
+    video_label.configure(image=imgtk)
         
-    save_img.pack()
+    save_btn.grid(row=1, column=0)
 
-def stop_camera():
+def stop_camera(mode=False):    # mode can be either "save", True or False
     global capturing
-    capturing = False
+    capturing = mode
     webcam.release()
 
     Start_capture.configure(text="Click to Start Camera", command=initialize)
 
-def create_widgets(sc, transaction_type, current_id):
-    global Start_capture, save_img, detection_error, video_label
-    Start_capture = Button(sc, text='Click me to open webcam', command=initialize, width=70,
-                               font=('bold', 25), activebackground='blue',activeforeground='white', fg='black', bg='lime')
-    Start_capture.pack()
-    
-    video_label = Label(sc)
-    video_label.pack(pady=10)
-    
-    detection_error = Label(sc, text="", fg="red", font=("Arial", 15))
-    detection_error.pack()
-    
-    save_img = Button(sc, text="Save and Proceed", bg="lime", font=("Arial", 15), command=lambda:cv2.imwrite('User Profiles/{}/ID_[{}].png'.format(transaction_type, current_id), frame))
 
+def save_img(transaction_type, current_id):
+    global proceed_to_next
+    cv2.imwrite('User Profiles/{}/ID_[{}].png'.format(transaction_type, current_id), cropped)
+    save_btn.configure(text="Capture Saved Successfuly!")
+    proceed_to_next = True
+
+
+def create_widgets(sc, transaction_type, current_id):
+    global Start_capture, save_btn, detection_error, video_label
+    Start_capture = Button(sc, text='Click to Start Camera', command=initialize, width=45,
+                               font=("Segoe UI", 15, "bold"), activebackground='blue',activeforeground='white', fg='black', bg='lightgreen')
+    Start_capture.pack()
+
+    horizontal_layout = Frame(sc, bg="maroon")
+    horizontal_layout.pack()
+
+    video_label = Label(horizontal_layout, bg="maroon")
+    video_label.grid(row=0, column=0, pady=10)
+
+    vertical_layout = Frame(horizontal_layout, bg="maroon")
+    vertical_layout.grid(row=0, column=1, padx=10)
+    
+    save_btn = Button(vertical_layout, text="Save Capture", bg="lightgreen", font=("Segoe UI", 15), command=lambda:save_img(transaction_type, current_id))
+
+    detection_error = Label(vertical_layout, text="", fg="pink", bg="maroon", font=("Segoe UI", 15))
+    detection_error.grid(row=0, column=0)

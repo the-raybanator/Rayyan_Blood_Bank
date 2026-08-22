@@ -6,12 +6,11 @@ Things Already Fixed:
  - Rearranged files
  - Fixed camera bug
  - Fix the verification process
+ - Fix the data confirmation code
+ - Complete rest of the flow
+ - Sync with database
 
 Things Left to Fix:
-     - Sync with database
-     - Complete rest of the flow
-     - Fix the data confirmation code
-
 
 Updates:
  - Wtf is this code. How did I actually build something with this
@@ -25,3 +24,7 @@ Updates:
  - Claude is saving my life too
  - I know its worth fixing it
  - I can feel the end lesss goooo!
+
+ THINGS I HAVE REMOVED FOR NOW:
+  - Graphic design animation
+  - Form verification command
