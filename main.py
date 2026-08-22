@@ -65,7 +65,7 @@ class UserData:
     def data_warning(self, heading, description):
         result = tk_messagebox.askquestion(f"{heading} Warning", description, icon='warning')
         if result != 'yes':
-            exit_func(input_sc)
+            exit_func(input_sc, show_warning=False)
 
 
 def disable_event():    # used as formality for the screens
@@ -142,7 +142,7 @@ def verify_details():
     if consumptions.data.get() != 'None' and consumptions.isfilled:
         if transaction_type == "Donors":
             tk_messagebox.showwarning("Consumption Warning", "It is too risky to donate, you CANNOT PROCEED. Don't consume it and then come to donate, please.", icon="warning")
-            exit_func(input_sc)
+            exit_func(input_sc, show_warning=False)
         else:
             restrictions.data_warning("Consumption", "BE AWARE THAT THIS CAN BE RISKY. Proceed with caution and only if its an emergency.")
         
@@ -150,11 +150,10 @@ def verify_details():
     if feminine.data.get() != 'None' and feminine.isfilled and feminine.data.get() != "":   # feminine.data.get() != "" ensures that it will ignore for when its not relevant
         if transaction_type == "Donors":
             tk_messagebox.showwarning("Feminine Warning", "It is too risky to donate, you CANNOT PROCEED. Come back later.", icon="warning")
-            exit_func(input_sc)
+            exit_func(input_sc, show_warning=False)
         else:
-            result = tk_messagebox.askquestion("Feminine Warning", "BE AWARE THAT THIS CAN BE RISKY. Proceed with caution and only if its an emergency.", icon='warning')
-            if result != 'yes':
-                exit_func(input_sc)
+            feminine.data_warning("Feminine", "BE AWARE THAT THIS CAN BE RISKY. Proceed with caution and only if its an emergency.")
+
 
     if error == 0:
         proceed_to_next = True
@@ -383,8 +382,13 @@ def exit_func(current_sc, destroy=False, show_warning=True):
         root.destroy()
 
     else:
-        result = tk_messagebox.askquestion("Exit", "Are you sure you exit? (Your data won't be saved...)",
+        current_sc.withdraw()
+        if show_warning:
+            result = tk_messagebox.askquestion("Exit", "Are you sure you exit? (Your data won't be saved...)",
                                                icon='warning')
+        else:
+            result = "yes"
+
         if result == 'yes':
             clear_data(warning=False)
             face_detection.proceed_to_next = False
@@ -392,9 +396,9 @@ def exit_func(current_sc, destroy=False, show_warning=True):
             for i in [input_sc, img_capt, process, confirm, the_end]:
                 for widget in i.winfo_children():
                     widget.destroy()
-            
-            current_sc.withdraw()
             sc.deiconify()
+        else:
+            current_sc.deiconify()
 
 
 
